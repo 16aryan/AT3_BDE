@@ -80,6 +80,8 @@ flowchart TD
     end
 ```
 
+![Figure 1: End-to-End ELT Medallion Architecture](reports/images/system_architecture_diagram.png)
+
 ### 2.1 The Medallion Architecture Layers
 
 1. **Bronze (Raw Landing)**:
@@ -95,6 +97,8 @@ flowchart TD
    - **Dimension Tables**: `dim_host`, `dim_property`, `dim_suburb`, and `dim_lga`.
    - **Reference Tables**: `census_g01` and `census_g02`.
    - **Datamart Views**: Materialized as SQL views that join fact rows to dimensions using point-in-time validity matching.
+
+![Figure 2: Gold Layer Dimensional Star Schema & Reference ERD](reports/images/star_schema_erd.png)
 
 ---
 
@@ -130,6 +134,8 @@ LEFT JOIN {{ ref('dim_host') }} h
     AND (f.scraped_date < h.dbt_valid_to OR h.dbt_valid_to IS NULL)
 ```
 This guarantees that if a host becomes a Superhost in December 2020, their May to November listings are recorded with `host_is_superhost = 'f'`, preventing historical distortion.
+
+![Figure 3: Slowly Changing Dimensions Type 2 (SCD2) Point-in-Time Join Logic](reports/images/scd2_timeline_diagram.png)
 
 ---
 
@@ -221,6 +227,8 @@ ORDER BY tier DESC, avg_revenue_per_active_listing DESC;
 | **Bottom 3** | **Randwick** | **$3,362.43** | 2.4 | 34.0 | $1,850 | 14.8% | 16.7% | 23.8% | 27.9% | 16.9% |
 | **Bottom 3** | **Blacktown** | **$3,260.99** | 3.2 | 33.0 | $1,550 | 22.8% | 14.4% | 17.6% | 27.4% | 18.2% |
 
+![Figure 4: 12-Month Lodging Revenue and Socioeconomic Profile for Top 3 vs Bottom 3 LGAs](reports/images/chart_q1_top_bottom_lgas.png)
+
 #### Analytical Insights:
 1. **Household Size**: Top-performing LGAs average **2.2 to 2.7 persons per household**, compared to **3.1 to 3.2 persons** in lower-performing LGAs like Blacktown and Canterbury-Bankstown. Smaller household sizes correlate with high apartment density and fewer dependents per dwelling.
 2. **Household Income**: Weekly household income in the top tier ($2,150 – $2,450) is up to **88% higher** than in the bottom tier ($1,300 – $1,550). Higher resident affluence mirrors tourist preference for premium coastal/harborside infrastructure.
@@ -270,6 +278,8 @@ JOIN gold.census_g02 g2 ON r.lga_code = g2.lga_code;
 | **Total LGAs Evaluated** | 9 |
 | **Overall Average Revenue per Listing** | $3,912.07 |
 | **Overall Average Median Age** | 35.2 Years |
+
+![Figure 5: Correlation between Census Resident Median Age and Average Listing Revenue](reports/images/chart_q2_median_age_vs_revenue.png)
 
 #### Analytical Insights:
 - A Pearson correlation coefficient of **$r = +0.4450$** indicates a **moderate positive linear relationship**.
@@ -345,6 +355,8 @@ ORDER BY t5.avg_revenue_per_active_listing DESC;
 | **Bondi Beach** | $6,054.88 | Entire house | Entire home/apt | 1 Guest | 415 | 18.86 | $271.40 |
 | **Double Bay** | $5,869.98 | Entire townhouse | Entire home/apt | 4 Guests | 444 | 15.31 | $381.47 |
 | **Sydney (CBD)** | $5,111.94 | Private room in apt | Private room | 4 Guests | 479 | 17.11 | $312.18 |
+
+![Figure 6: Optimal Listing Configuration for Top 5 Suburbs by Stays](reports/images/chart_q3_top5_neighbourhoods_stays.png)
 
 #### Analytical Insights:
 1. **Coastal & Eastern Suburbs (Manly, Bondi, Double Bay)**: Entire private homes and townhouses that accommodate **2 to 4 guests** capture the highest stay volumes and highest pricing power ($305 to $381/night). Holidaymakers and domestic tourists traveling in small groups or couples strongly prefer unshared residences.
