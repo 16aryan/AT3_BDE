@@ -1,0 +1,19 @@
+# dbt
+dbt_bde/target/
+dbt_bde/logs/
+dbt_bde/dbt_packages/
+dbt_bde/modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db

@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze
+    description: "Raw landing tables loaded directly by Airflow"
+    tables:
+      - name: raw_listings
+        description: "Raw Sydney Airbnb listings loaded month by month"
+      - name: raw_census_g01
+        description: "ABS 2016 Census G01 table at LGA level"
+      - name: raw_census_g02
+        description: "ABS 2016 Census G02 table at LGA level"
+      - name: raw_lga_suburb
+        description: "Mapping table between LGA code/name and Suburb names"
