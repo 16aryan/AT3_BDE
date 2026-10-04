@@ -33,6 +33,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./sql/00_init_postgres_users.sql:/docker-entrypoint-initdb.d/00_init_users.sql
       - ./sql/01_create_bronze_schema.sql:/docker-entrypoint-initdb.d/01_init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
