@@ -39,24 +39,46 @@ LOCAL_DATA_DIR = os.environ.get('AIRFLOW_DATA_DIR', '/opt/airflow/data')
 
 def get_file_content(file_path_or_blob_name):
     """
-    Reads file from GCS bucket if configured, otherwise falls back to local data directory.
+    Reads file from GCS bucket if configured, Composer mounted GCS path, or local fallback.
     """
+    base = os.path.basename(file_path_or_blob_name)
+    
+    # 1. Check Cloud Composer mounted GCS folders
+    composer_candidates = [
+        os.path.join('/home/airflow/gcs/data', base),
+        os.path.join('/home/airflow/gcs/dags', base),
+        os.path.join('/home/airflow/gcs/dags/data', base),
+    ]
+    for p in composer_candidates:
+        if os.path.exists(p):
+            logging.info(f"Reading from Composer path: {p}")
+            return open(p, 'rb')
+            
+    # 2. Check GCS bucket directly via GCSHook if configured
     if GCS_BUCKET_NAME:
         from airflow.providers.google.cloud.hooks.gcs import GCSHook
         gcs_hook = GCSHook()
-        logging.info(f"Fetching gs://{GCS_BUCKET_NAME}/{file_path_or_blob_name}")
-        file_bytes = gcs_hook.download(bucket_name=GCS_BUCKET_NAME, object_name=file_path_or_blob_name)
-        return io.BytesIO(file_bytes)
-    else:
-        # Local file system fallback
-        local_path = os.path.join(LOCAL_DATA_DIR, os.path.basename(file_path_or_blob_name))
-        if not os.path.exists(local_path):
-            # Check relative to repo
-            candidate = os.path.join('/Users/aryan/AT3_BDE/data', os.path.basename(file_path_or_blob_name))
-            if os.path.exists(candidate):
-                local_path = candidate
-        logging.info(f"Reading local file: {local_path}")
-        return open(local_path, 'rb')
+        for prefix in ['data/', '']:
+            obj = f"{prefix}{base}"
+            try:
+                logging.info(f"Trying gs://{GCS_BUCKET_NAME}/{obj}")
+                file_bytes = gcs_hook.download(bucket_name=GCS_BUCKET_NAME, object_name=obj)
+                return io.BytesIO(file_bytes)
+            except Exception:
+                continue
+
+    # 3. Local file system fallback
+    local_candidates = [
+        os.path.join(LOCAL_DATA_DIR, base),
+        os.path.join('/Users/aryan/AT3_BDE/data', base),
+        os.path.join('./data', base),
+    ]
+    for p in local_candidates:
+        if os.path.exists(p):
+            logging.info(f"Reading local file: {p}")
+            return open(p, 'rb')
+            
+    raise FileNotFoundError(f"Could not find {file_path_or_blob_name} in any candidate locations")
 
 
 def load_census_g01(**kwargs):
