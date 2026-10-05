@@ -405,12 +405,22 @@ def generate_report():
         "and (3) Cloud Composer 2 (Airflow 2.11.1 on GKE Autopilot, environment bde-composer)."
     )
 
+    img_sql = "reports/images/cloud_sql_instance.png"
+    if os.path.exists(img_sql):
+        doc.add_picture(img_sql, width=Inches(5.0))
+        p_cap = doc.add_paragraph()
+        p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r_cap = p_cap.add_run("Figure 2: Active Google Cloud SQL PostgreSQL 18 Instance in Sydney (IP: 35.197.167.206)")
+        r_cap.font.size = Pt(7.5)
+        r_cap.font.italic = True
+        r_cap.font.color.rgb = RGBColor(100, 100, 100)
+
     img_comp = "reports/images/composer_environment_running.png"
     if os.path.exists(img_comp):
         doc.add_picture(img_comp, width=Inches(5.0))
         p_cap = doc.add_paragraph()
         p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_cap = p_cap.add_run("Figure 2: Active Cloud Composer 2 Environment in Sydney (australia-southeast1)")
+        r_cap = p_cap.add_run("Figure 3: Active Google Cloud Composer 2 Environment in Sydney (australia-southeast1)")
         r_cap.font.size = Pt(7.5)
         r_cap.font.italic = True
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
@@ -431,7 +441,7 @@ def generate_report():
         doc.add_picture(img_dag, width=Inches(5.0))
         p_cap = doc.add_paragraph()
         p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_cap = p_cap.add_run("Figure 3: Live Airflow DAG Grid View on Cloud Composer (100% Green Success Status)")
+        r_cap = p_cap.add_run("Figure 4: Live Airflow DAG Grid View on Cloud Composer (100% Green Success Status)")
         r_cap.font.size = Pt(7.5)
         r_cap.font.italic = True
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
@@ -502,7 +512,7 @@ def generate_report():
         doc.add_picture(scd_img, width=Inches(5.0))
         p_cap = doc.add_paragraph()
         p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_cap = p_cap.add_run("Figure 4: SCD Type 2 Timeline Diagram Demonstrating Validity Intervals (dbt_valid_from to dbt_valid_to)")
+        r_cap = p_cap.add_run("Figure 5: SCD Type 2 Timeline Diagram Demonstrating Validity Intervals (dbt_valid_from to dbt_valid_to)")
         r_cap.font.size = Pt(7.5)
         r_cap.font.italic = True
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
@@ -565,7 +575,7 @@ def generate_report():
         doc.add_picture(erd_img, width=Inches(5.0))
         p_cap = doc.add_paragraph()
         p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_cap = p_cap.add_run("Figure 5: Gold Tier Star Schema Entity-Relationship Diagram (ERD)")
+        r_cap = p_cap.add_run("Figure 6: Gold Tier Star Schema Entity-Relationship Diagram (ERD)")
         r_cap.font.size = Pt(7.5)
         r_cap.font.italic = True
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
@@ -639,7 +649,7 @@ def generate_report():
         doc.add_picture(q1_img, width=Inches(5.0))
         p_cap = doc.add_paragraph()
         p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_cap = p_cap.add_run("Figure 6: Comparative Performance & Income Disparities Between Top 3 and Bottom 3 LGAs")
+        r_cap = p_cap.add_run("Figure 7: Comparative Performance & Income Disparities Between Top 3 and Bottom 3 LGAs")
         r_cap.font.size = Pt(7.5)
         r_cap.font.italic = True
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
@@ -691,7 +701,7 @@ def generate_report():
         doc.add_picture(q2_img, width=Inches(5.0))
         p_cap = doc.add_paragraph()
         p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_cap = p_cap.add_run("Figure 7: Scatter Plot & Trendline of LGA Median Age vs 12-Month Estimated Revenue per Active Listing")
+        r_cap = p_cap.add_run("Figure 8: Scatter Plot & Trendline of LGA Median Age vs 12-Month Estimated Revenue per Active Listing")
         r_cap.font.size = Pt(7.5)
         r_cap.font.italic = True
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
@@ -745,7 +755,7 @@ def generate_report():
         doc.add_picture(q3_img, width=Inches(5.0))
         p_cap = doc.add_paragraph()
         p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_cap = p_cap.add_run("Figure 8: Average Stays Recorded and Revenue Yield across Top 5 Sydney Neighbourhoods")
+        r_cap = p_cap.add_run("Figure 9: Average Stays Recorded and Revenue Yield across Top 5 Sydney Neighbourhoods")
         r_cap.font.size = Pt(7.5)
         r_cap.font.italic = True
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
