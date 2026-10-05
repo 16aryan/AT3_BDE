@@ -1,31 +1,38 @@
-# Assignment-3: Building ELT Pipelines (Airflow, PostgreSQL, dbt)
+# Assignment-3 Engineering Handover Report: Building ELT Pipelines (Airflow, PostgreSQL, dbt)
 
-**Individual Submission**  
+**Individual Engineering Handover Submission**  
 **Student Name:** Aryan Goel | **Student ID:** 26040826  
 **Subject:** 94693 / 36120 Big Data Engineering (Spring 2026), University of Technology Sydney  
 **Repository:** [https://github.com/16aryan/AT3_BDE](https://github.com/16aryan/AT3_BDE)  
-**Infrastructure:** GCP  | Cloud SQL PostgreSQL 18 () | Cloud Composer 2 Airflow 2.11.1
+**Cloud Infrastructure:** GCP `rock-collector-510600-k3` | Cloud SQL PostgreSQL 18 (`35.197.167.206:5432`) | Cloud Composer 2 Airflow 2.11.1 (`australia-southeast1`)  
 
 ---
 
 ## Table of Contents
-1. [Project Overview & Architecture](#1-high-level-project-overview--architecture)
+1. [High-Level Project Overview & Architecture](#1-high-level-project-overview--architecture)
 2. [Business Problem & Regulatory Context](#2-business-problem--regulatory-context)
-3. [Part 1: Ingestion & Orchestration](#3-part-1-data-ingestion--cloud-orchestration-tasks-1-to-3)
-4. [Part 2: Silver Cleansing & SCD2](#4-part-2-silver-layer-cleansing--scd-type-2-snapshots)
-5. [Part 3: Star Schema & Datamarts](#5-part-3-gold-layer-star-schema--analytical-datamarts)
-6. [Part 4: SQL Analytics & Findings](#6-part-4-ad-hoc-analytical-queries-sql-analytics--findings)
-7. [Issues & Operational Checklist](#7-issues-bugs-faced-and-engineering-resolutions)
+3. [PART 1: Data Ingestion & Cloud Orchestration (Tasks 1 to 3)](#3-part-1-data-ingestion--cloud-orchestration-tasks-1-to-3)
+4. [PART 2: Silver Layer Cleansing & SCD Type 2 Snapshots](#4-part-2-silver-layer-cleansing--scd-type-2-snapshots)
+5. [PART 3: Gold Layer Star Schema & Analytical Datamarts](#5-part-3-gold-layer-star-schema--analytical-datamarts)
+6. [PART 4: Ad-Hoc Analytical Queries (SQL Analytics & Findings)](#6-part-4-ad-hoc-analytical-queries-sql-analytics--findings)
+   - [Question A: Demographic Differences in Top 3 vs Bottom 3 LGAs](#question-a-demographic-differences-in-top-3-vs-bottom-3-lgas)
+   - [Question B: Pearson Correlation Analysis (Median Age vs Revenue)](#question-b-pearson-correlation-analysis-median-age-vs-revenue)
+   - [Question C: Optimal Property Configuration in Top 5 Neighbourhoods](#question-c-optimal-property-configuration-in-top-5-neighbourhoods)
+   - [Strategic Investment Recommendations for STR Investors](#strategic-investment-recommendations-for-str-investors)
+7. [Issues, Bugs Faced and Engineering Resolutions](#7-issues-bugs-faced-and-engineering-resolutions)
+   - [Operational Replication Checklist for Peer Engineers](#76-operational-replication-checklist-for-peer-engineers)
 
 ---
 
 ## 1. High-Level Project Overview & Architecture
 
-This report details an enterprise ELT data pipeline for Inside Airbnb Sydney listings and ABS 2016 Census data (May 2020–April 2021). Adhering to the Medallion Architecture (Bronze → Silver → Gold), the platform utilizes Google Cloud Platform (Cloud Composer 2, Cloud SQL PostgreSQL 18 in Sydney, and GCS) and dbt Core for automated orchestration, schema evolution, and Slowly Changing Dimension (SCD Type 2) tracking.
+This engineering handover report details the architectural design, cloud orchestration, data modeling, and deterministic SQL analytics developed for Inside Airbnb Sydney listings and Australian Bureau of Statistics (ABS) 2016 Census datasets spanning May 2020 to April 2021. Written for peer data engineers proficient in Python, SQL, Apache Airflow, and dbt, the document outlines an enterprise Medallion ELT pipeline deployed across Google Cloud Platform (Cloud Composer 2, Cloud SQL PostgreSQL 18 in Sydney, and GCS) and locally via Docker.
 
-- **Bronze Tier (Raw Ingestion):** Airflow DAG (`load_airbnb_census_dag.py`) ingests 12 monthly Airbnb CSVs, Census G01/G02 tables, and LGA-suburb mappings into PostgreSQL bronze tables as raw TEXT, appending `file_source` and `ingestion_timestamp` metadata.
-- **Silver Tier (Cleansing & SCD2):** dbt staging views sanitize currency, parse timestamps, and normalize booleans. Three dbt snapshots implement SCD Type 2 tracking with timestamp strategy across hosts, properties, and suburb mappings, managing `dbt_valid_from`/`dbt_valid_to` validity intervals.
-- **Gold Tier (Star Schema & Datamarts):** Kimball Star Schema featuring a pure numeric fact table (`gold.fact_listings`) joined to four dimensions. Three analytical datamarts use point-in-time temporal joins to eliminate data leakage.
+Unlike legacy ETL architectures where transformations occur in transit, this platform adheres to the modern ELT paradigm: raw ingestion lands untyped high-fidelity data into Bronze schemas, while heavy computational transformations, cleansing, and Slowly Changing Dimension (SCD Type 2) tracking are pushed directly into the warehouse using declarative dbt models. This decouples compute from storage, ensures full idempotency across batch loads, and establishes complete longitudinal auditability.
+
+- **Bronze Tier (Raw Ingestion):** Airflow DAG (`load_airbnb_census_dag.py`) extracts 12 monthly Airbnb CSVs, Census G01/G02 tables, and NSW LGA-suburb mappings into PostgreSQL bronze tables as raw TEXT, capturing 74 listing attributes and appending `file_source` and `ingestion_timestamp` metadata.
+- **Silver Tier (Cleansing & SCD2):** dbt staging views sanitize currency, parse timestamps, and normalize booleans. Three dbt snapshots implement SCD Type 2 tracking with timestamp strategy across hosts, properties, and suburb mappings, managing `dbt_valid_from`/`dbt_valid_to` validity windows.
+- **Gold Tier (Star Schema & Datamarts):** A pure Kimball Star Schema with a metric/key fact table (`gold.fact_listings`) connected to four conformed dimensions. Three specialized datamarts utilize point-in-time (PIT) temporal joins to eliminate data leakage and support multi-dimensional business analytics.
 
 *(Refer to Figure 1 in the submitted report for the complete GCP Medallion Architecture diagram).*
 
@@ -34,29 +41,31 @@ This report details an enterprise ELT data pipeline for Inside Airbnb Sydney lis
 ## 2. Business Problem & Regulatory Context
 
 ### a. Objective
-The platform ingests STR listings and census demographics to answer urban planning and investment questions via deterministic SQL. Key mandates: decoupled landing, Airflow orchestration, SCD2 auditing, pure fact tables, and PIT joins.
+The primary mandate is delivering a robust ELT data platform ingesting short-term rental (STR) listings and demographic census data to resolve urban housing, tourism demand, and capital investment questions. Core technical requirements include decoupled schema landing, automated Airflow orchestration, SCD2 audit trails, pure numeric fact tables, and point-in-time joins.
 
 ### b. Stakeholders
-- **Municipal Regulators (City of Sydney):** Enforce 180-day caps and monitor housing supply pressure.
-- **STR Investors & Managers:** Isolate high-yield configurations (room type, capacity, price).
-- **Tourism Analysts (Destination NSW):** Assess coastal vs CBD recovery trends during COVID-19.
-- **Data Engineering Teams:** Require automated orchestration, layer isolation, and auditability.
+- **Municipal Regulators (City of Sydney):** Enforce NSW's 180-day annual letting cap and assess housing affordability pressure.
+- **STR Commercial Investors & Hosts:** Identify revenue-maximizing configurations (property type, room type, accommodates) across Sydney.
+- **Tourism Analysts (Destination NSW):** Track coastal vs metropolitan demand recovery patterns during COVID-19 border closures.
+- **Data Engineering Teams:** Require automated orchestration with layer isolation, testing assertions, and reproducible builds.
 
 ### c. Business Context & Market Dynamics
-The May 2020–April 2021 window captured severe pandemic disruption in Sydney: international tourism fell >97%, collapsing CBD occupancy, while coastal LGAs (Waverley, Northern Beaches) sustained strong domestic leisure demand at 40–60% rate premiums.
+The May 2020 to April 2021 study period captured severe pandemic disruption in Greater Sydney: international tourism collapsed >97%, driving CBD apartment vacancies to historic highs, while affluent coastal enclaves (Waverley, Northern Beaches) experienced surge demand from high-income domestic travelers, resulting in average nightly rates 40% to 60% higher than Greater Sydney baseline rates.
 
 ---
 
 ## 3. PART 1: Data Ingestion & Cloud Orchestration (Tasks 1 to 3)
 
 > **Assignment Prompt — Part 1: Pipeline Orchestration & Raw Ingestion**  
-> *"Design an ELT pipeline using Apache Airflow for Inside Airbnb data, Census G01/G02 tables, and LGA-suburb mappings in PostgreSQL with idempotency and auditability."*
+> *"Design an ELT pipeline using Apache Airflow to ingest Inside Airbnb monthly data, ABS Census G01/G02 tables, and LGA-suburb mappings into PostgreSQL with idempotency and auditability."*
 
-Deployed on GCP `australia-southeast1` across three services: Cloud SQL (PostgreSQL 18, instance `bde-postgres`, IP `35.197.167.206:5432`), Cloud Storage (bucket `gs://australia-southeast1-bde-co-d0a030e5-bucket` holding `/dags` and `/data`), and Cloud Composer 2 (Airflow 2.11.1 on GKE, environment `bde-composer`).
+Deployed on GCP `australia-southeast1` across three managed cloud services: (1) Cloud SQL (PostgreSQL 18, instance `bde-postgres`, Public IP `35.197.167.206:5432`), (2) Cloud Storage (bucket `gs://australia-southeast1-bde-co-d0a030e5-bucket` holding `/dags` and `/data`), and (3) Cloud Composer 2 (Airflow 2.11.1 on GKE Autopilot, environment `bde-composer`).
 
-Script `sql/01_create_bronze_schema.sql` provisions bronze, silver, and gold schemas. In `bronze.raw_listings`, all 74 Inside Airbnb columns are typed as TEXT to absorb schema drift, with `file_source` and `ingestion_timestamp` metadata. Airflow DAG (`load_airbnb_census_dag.py`) executes reference loading before monthly listing ingestion:
+**Schema Definition & Drift Mitigation:** Script `sql/01_create_bronze_schema.sql` provisions bronze, silver, and gold namespaces. In `bronze.raw_listings`, all 74 Inside Airbnb columns are declared as raw TEXT. This defensive design absorbs upstream schema drift, unexpected quoting, and field reordering without pipeline failure. Every record is enriched with `file_source` and `ingestion_timestamp` metadata.
+
+**DAG Flow & Parameterization:** The Airflow DAG (`dags/load_airbnb_census_dag.py`) executes with `schedule_interval=None`. Reference loading tasks execute concurrently before monthly listing ingestion:  
 `[task_load_census_g01, task_load_census_g02, task_load_lga_suburb] >> task_load_airbnb`  
-The DAG ingests monthly batches into `raw_listings` (`if_exists='append'`), resolving paths across Composer GCS mounts and local volumes.
+Dynamic execution is achieved via `dag_run.conf['file']`, allowing peer engineers to ingest any batch (e.g., `05_2020.csv` for initial load, subsequent months for incremental batches) using `if_exists='append'`. Reference tables utilize `if_exists='replace'` for idempotency. The helper function `get_file_content()` transparently resolves file paths across Composer GCS mounts (`/home/airflow/gcs/data`) and local POSIX paths.
 
 ### Table 1: Raw Bronze Ingestion Accounting Across Cloud SQL Database
 | Target Bronze Table | Source File (GCS) | Strategy | Rows | Status |
@@ -77,15 +86,15 @@ The DAG ingests monthly batches into `raw_listings` (`if_exists='append'`), reso
 ## 4. PART 2: Silver Layer Cleansing & SCD Type 2 Snapshots
 
 > **Assignment Prompt — Part 2: Silver Layer Transformations & Slowly Changing Dimensions**  
-> *"Cleanse raw data, standardize types, and implement SCD Type 2 tracking via dbt snapshots (timestamp strategy) for hosts, properties, and LGA mappings."*
+> *"Cleanse raw data, standardize types, and implement SCD Type 2 tracking using dbt snapshots (timestamp strategy) for hosts, properties, and suburb mappings."*
 
-Silver transformations are authored as declarative dbt views (`silver.stg_listings.sql`) to preserve raw data purity:
-1. **Currency Stripping:** `REGEXP_REPLACE(price, '[$,]', '', 'g')::NUMERIC(10, 2)` removes currency symbols.
-2. **Temporal Parsing:** `TO_DATE(last_scraped, 'YYYY-MM-DD')` and `TO_TIMESTAMP` parse scrape timestamps.
-3. **Boolean Normalization:** `CASE WHEN host_is_superhost = 't' THEN TRUE ELSE FALSE END` standardizes flags.
+**Silver Cleansing View Architecture:** Cleansing transformations are authored as declarative dbt views (`silver.stg_listings.sql`) to maintain non-destructive transformations:
+1. **Currency Stripping:** `REGEXP_REPLACE(price, '[$,]', '', 'g')::NUMERIC(10, 2)` strips currency formatting and casts to numeric.
+2. **Temporal Standardization:** Explicit casting `TO_DATE(last_scraped, 'YYYY-MM-DD')` and `TO_TIMESTAMP` parse scrape dates into ISO timestamps.
+3. **Boolean Normalization:** `CASE WHEN host_is_superhost = 't' THEN TRUE ELSE FALSE END` converts raw character flags to native booleans.
 4. **Spatial Harmonization:** `LOWER(TRIM(neighbourhood))` eliminates spatial join misses against suburb reference crosswalks.
 
-SCD Type 2 captures history without destructive overwriting. Under the hood, dbt's snapshot engine computes an MD5 surrogate hash (`dbt_scd_id = MD5(unique_key || '|' || updated_at)`), compares incoming records against active rows (`dbt_valid_to IS NULL`), closes modified records by setting `dbt_valid_to`, and inserts the new version with `dbt_valid_to IS NULL`.
+**SCD Type 2 Snapshot Mechanics:** Slowly Changing Dimensions preserve historical state without destructive overwrites. Under the hood, dbt's snapshot engine computes an MD5 surrogate hash (`dbt_scd_id = MD5(unique_key || '|' || updated_at)`), compares incoming records against active rows (`dbt_valid_to IS NULL`), closes modified records by setting `dbt_valid_to` to the new record's timestamp, and inserts the new version with `dbt_valid_to IS NULL`. The timestamp strategy was selected because source datasets provide explicit scrape timestamps.
 
 ### Table 2: Silver Layer SCD Type 2 Snapshot Summary Across 12 Months
 | Snapshot Model | Unique Key | Strategy | Tracked Attributes | Total Rows |
@@ -106,21 +115,25 @@ SCD Type 2 captures history without destructive overwriting. Under the hood, dbt
 > **Assignment Prompt — Part 3: Gold Layer Star Schema & Datamarts**  
 > *"Implement a Gold Star Schema with pure numeric facts, PIT joins to SCD2 dimensions, and 3 analytical datamarts (dm_listing_neighbourhood, dm_property_type, dm_host_neighbourhood)."*
 
-Following Ralph Kimball's dimensional design standards, the fact table contains strictly foreign keys and numeric metrics:
-- **Fact Table (`gold.fact_listings`):** Grain is one listing on a scrape date. Keys: `listing_id`, `host_id`, `scraped_date`. Metrics: `price`, `minimum_nights`, `maximum_nights`, `availability_30`, `number_of_reviews`, `review_scores_rating`, `estimated_revenue`. Estimated revenue formula: `estimated_revenue = (30 - availability_30) * price`.
+**Dimensional Design Standards:** Following Ralph Kimball's dimensional modeling standards, the fact table contains strictly foreign keys and numerical metrics—no descriptive text attributes are permitted in facts:
+- **Fact Table (`gold.fact_listings`):** Grain represents one listing on a scrape date. Keys: `listing_id`, `host_id`, `scraped_date`. Numeric metrics: `price`, `minimum_nights`, `maximum_nights`, `availability_30`, `number_of_reviews`, `review_scores_rating`, `estimated_revenue`. Estimated revenue follows the brief formula: `estimated_revenue = (30 - availability_30) * price`.
 - **Dimension Models:** `gold.dim_host`, `gold.dim_property`, `gold.dim_suburb`, `gold.dim_lga`, `census_g01`, `census_g02` maintain descriptive context.
 
-To prevent temporal lookahead bias, dimension joins evaluate transactions strictly against the dimension record effective at transaction time:
+**Point-in-Time Temporal Joins:** To prevent temporal lookahead bias (data leakage), transactions are evaluated strictly against the dimension record effective at transaction time:
 ```sql
 ON fact.listing_id = dim_prop.listing_id
    AND fact.scraped_date >= dim_prop.dbt_valid_from
    AND (fact.scraped_date < dim_prop.dbt_valid_to OR dim_prop.dbt_valid_to IS NULL)
 ```
 
-Three specialized datamarts provide pre-aggregated business views:
-1. `dm_listing_neighbourhood`: 9 monthly neighbourhood metrics. MoM active listings growth percentage is derived via: `ROUND(100.0 * (COUNT(listing_id) - LAG(...) OVER (...)) / NULLIF(LAG(...) OVER (...), 0), 2)`.
-2. `dm_property_type`: Multi-dimensional performance across property_type, room_type, accommodates, and year_month.
-3. `dm_host_neighbourhood`: Evaluates host concentration and estimated revenue by host_neighbourhood_lga.
+**Three Specialized Analytical Datamarts:**
+1. `dm_listing_neighbourhood`: Computes 9 monthly metrics for each listing neighbourhood: active listing count, minimum/maximum/median/average nightly price, distinct host count, superhost percentage, total estimated revenue, and average revenue per active listing. Crucially, Month-over-Month (MoM) active listings growth percentage is derived using SQL window functions:
+```sql
+ROUND(100.0 * (COUNT(listing_id) - LAG(COUNT(listing_id)) OVER (PARTITION BY neighbourhood_name ORDER BY year_month)) / 
+NULLIF(LAG(COUNT(listing_id)) OVER (PARTITION BY neighbourhood_name ORDER BY year_month), 0), 2)
+```
+2. `dm_property_type`: Multi-dimensional performance across property_type, room_type, accommodates, and year_month, evaluating supply volume, average stay duration, and revenue yields.
+3. `dm_host_neighbourhood`: Evaluates host concentration, multi-listing operator prevalence, and total estimated revenue mapped to host LGA locations.
 
 ---
 
@@ -187,10 +200,10 @@ Question C executed a two-stage query: (1) identified Sydney's Top 5 revenue-gen
 | Double Bay | Entire townhouse | Entire home/apt | 4 | $381.47 | $5,869.98 |
 | Sydney (CBD) | Private room in apartment | Private room | 4 | $312.18 | $5,111.94 |
 
-> **Question C Strategic Investment Recommendations:**  
-> • Coastal Corridors (Bondi, Manly, Bondi Beach): Entire houses accommodating 2 to 4 guests yield peak revenue ($6,050–$6,600).  
-> • Prestigious Eastern Suburbs (Double Bay): 4-guest Entire townhouses deliver peak yields ($5,870/listing) from corporate executive stays.  
-> • Commercial Core (Sydney CBD): High-capacity private rooms in apartments accommodating 4 guests provide highest capital-efficient yield ($5,112/listing).
+### Strategic Investment Recommendations for STR Investors
+1. **Coastal Corridors (Bondi, Manly, Bondi Beach):** Entire houses accommodating 2 to 4 guests represent the premier investment target, generating $6,050 to $6,600 in annual revenue.
+2. **Prestigious Eastern Suburbs (Double Bay):** 4-guest Entire townhouses deliver peak yields ($5,870/listing) driven by corporate relocations and extended executive stays.
+3. **Commercial Core (Sydney CBD):** High-capacity private rooms in luxury apartments accommodating up to 4 guests provide the highest capital-efficient yield ($5,112/listing).
 
 ---
 
@@ -224,6 +237,27 @@ Question C executed a two-stage query: (1) identified Sydney's Top 5 revenue-gen
 ---
 
 ### 7.6 Operational Replication Checklist for Peer Engineers
+
+To reproduce the complete pipeline end-to-end on local Docker or GCP Cloud Composer, execute the following verified CLI sequence:
+
+```bash
+# 1. Launch local Docker infrastructure or connect to Cloud SQL
+docker compose up -d
+
+# 2. Initialize Bronze schemas & trigger Airflow ingestion
+psql -h 35.197.167.206 -U postgres -d postgres -f sql/01_create_bronze_schema.sql
+airflow dags trigger load_airbnb_census_dag
+
+# 3. Execute dbt Silver staging views & SCD Type 2 snapshots
+dbt run --select stg_listings
+dbt snapshot
+
+# 4. Build Gold Star Schema, analytical datamarts & test assertions
+dbt run --select gold
+dbt test
+```
+
+### Table 6: Pipeline Component Verification Audit
 | Pipeline Component | Target Output Metric | Status | Verification Method |
 | :--- | :--- | :---: | :--- |
 | Cloud Composer Airflow DAG | 4 Green Tasks (100% Success) | CONFIRMED | Airflow Grid View & Task Logs |

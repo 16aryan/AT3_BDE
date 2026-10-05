@@ -1,6 +1,8 @@
 """
-Calibrates the Assignment 3 Report to strictly between 2,200 and 2,350 total words
-(including paragraphs, table cells, prompt boxes, callouts, and captions).
+UTS 36120 Big Data Engineering - Assignment 3 Handover Report Generator
+Calibrates the handover report strictly between 2,750 and 2,850 total words
+(inclusive of all body paragraphs, table cells, prompt boxes, callouts, and captions).
+Adheres strictly to the <= 3,000 words limit specified in the assignment brief.
 """
 
 import os
@@ -27,6 +29,10 @@ def set_cell_margins(cell, top=40, bottom=40, left=80, right=80):
     tcPr.append(tcMar)
 
 def add_callout_box(doc, title, content_lines, border_color="0080FF", bg_color="F4F8FC"):
+    p_before = doc.add_paragraph()
+    p_before.paragraph_format.space_before = Pt(2)
+    p_before.paragraph_format.space_after = Pt(2)
+    
     tbl = doc.add_table(rows=1, cols=1)
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     tbl.autofit = False
@@ -200,12 +206,12 @@ def generate_report():
 
     p_title1 = doc.add_paragraph()
     p_title1.paragraph_format.space_after = Pt(2)
-    r = p_title1.add_run("Assignment-3")
+    r = p_title1.add_run("Assignment-3 Handover Report")
     r.font.size = Pt(24)
     r.font.color.rgb = RGBColor(0, 128, 255)
     
     p_title2 = doc.add_paragraph()
-    p_title2.paragraph_format.space_after = Pt(60)
+    p_title2.paragraph_format.space_after = Pt(50)
     r = p_title2.add_run("Building ELT Pipelines\n(Airflow, PostgreSQL, dbt)")
     r.font.name = 'Georgia'
     r.font.size = Pt(24)
@@ -214,7 +220,7 @@ def generate_report():
 
     p_meta1 = doc.add_paragraph()
     p_meta1.paragraph_format.space_after = Pt(2)
-    p_meta1.add_run("Individual submission").font.size = Pt(11)
+    p_meta1.add_run("Individual Engineering Handover Submission").font.size = Pt(11)
     
     p_meta2 = doc.add_paragraph()
     p_meta2.paragraph_format.space_after = Pt(2)
@@ -232,7 +238,7 @@ def generate_report():
     r.bold = True
     r.font.size = Pt(9)
     p_cloud.add_run("Cloud SQL: bde-postgres (PostgreSQL 18, Sydney, IP: 35.197.167.206)\n").font.size = Pt(9)
-    p_cloud.add_run("Cloud Composer: bde-composer (Airflow 2.11.1 on GKE)\n").font.size = Pt(9)
+    p_cloud.add_run("Cloud Composer: bde-composer (Airflow 2.11.1 on GKE Autopilot)\n").font.size = Pt(9)
     p_cloud.add_run("GitHub Repository: https://github.com/16aryan/AT3_BDE\n").font.size = Pt(9)
     r = p_cloud.add_run("2026 SPRING")
     r.bold = True
@@ -297,31 +303,39 @@ def generate_report():
     r.font.color.rgb = RGBColor(0, 80, 160)
 
     doc.add_paragraph(
-        "This report documents an enterprise ELT data pipeline for Inside Airbnb Sydney listings and ABS 2016 Census "
-        "data (May 2020–April 2021). Adhering to the Medallion Architecture (Bronze → Silver → Gold), the platform utilizes "
-        "Google Cloud Platform (Cloud Composer 2, Cloud SQL PostgreSQL 18 in Sydney, and GCS) and dbt Core to deliver automated "
-        "orchestration, schema evolution, and Slowly Changing Dimension (SCD Type 2) history tracking."
+        "This engineering handover report details the architectural design, cloud orchestration, data modeling, and deterministic "
+        "SQL analytics developed for Inside Airbnb Sydney listings and Australian Bureau of Statistics (ABS) 2016 Census datasets "
+        "spanning May 2020 to April 2021. Written for peer data engineers proficient in Python, SQL, Apache Airflow, and dbt, "
+        "the document outlines an enterprise Medallion ELT pipeline deployed across Google Cloud Platform (Cloud Composer 2, "
+        "Cloud SQL PostgreSQL 18 in Sydney, and GCS) and locally via Docker."
+    )
+
+    doc.add_paragraph(
+        "Unlike legacy ETL architectures where transformations occur in transit, this platform adheres to the modern ELT paradigm: "
+        "raw ingestion lands untyped high-fidelity data into Bronze schemas, while heavy computational transformations, cleansing, "
+        "and Slowly Changing Dimension (SCD Type 2) tracking are pushed directly into the warehouse using declarative dbt models. "
+        "This decouples compute from storage, ensures full idempotency across batch loads, and establishes complete longitudinal auditability."
     )
 
     p = doc.add_paragraph()
     p.add_run("• Bronze Tier (Raw Ingestion): ").bold = True
     p.add_run(
-        "Airflow DAG (load_airbnb_census_dag.py) ingests 12 monthly Airbnb CSVs, Census G01/G02 tables, and LGA-suburb mappings "
-        "into PostgreSQL bronze tables as raw TEXT, appending file_source and ingestion_timestamp metadata."
+        "Airflow DAG (load_airbnb_census_dag.py) extracts 12 monthly Airbnb CSVs, Census G01/G02 tables, and NSW LGA-suburb mappings "
+        "into PostgreSQL bronze tables as raw TEXT, capturing 74 listing attributes and appending file_source and ingestion_timestamp metadata."
     )
 
     p = doc.add_paragraph()
     p.add_run("• Silver Tier (Cleansing & SCD2): ").bold = True
     p.add_run(
         "dbt staging views sanitize currency, parse timestamps, and normalize booleans. Three dbt snapshots implement SCD Type 2 "
-        "tracking with timestamp strategy across hosts, properties, and suburb mappings, managing dbt_valid_from/dbt_valid_to windows."
+        "tracking with timestamp strategy across hosts, properties, and suburb mappings, managing dbt_valid_from/dbt_valid_to validity windows."
     )
 
     p = doc.add_paragraph()
     p.add_run("• Gold Tier (Star Schema & Datamarts): ").bold = True
     p.add_run(
-        "Kimball Star Schema featuring a pure numeric fact table (gold.fact_listings) joined to four dimensions. Three datamarts "
-        "use point-in-time temporal joins to eliminate data leakage."
+        "A pure Kimball Star Schema with a metric/key fact table (gold.fact_listings) connected to four conformed dimensions. Three specialized "
+        "datamarts utilize point-in-time (PIT) temporal joins to eliminate data leakage and support multi-dimensional business analytics."
     )
 
     arch_img = "reports/images/system_architecture_diagram.png"
@@ -345,17 +359,17 @@ def generate_report():
 
     doc.add_heading("a. Objective", level=2)
     doc.add_paragraph(
-        "The project delivers a scalable ELT platform ingesting short-term rental (STR) listings and census demographics to resolve "
-        "urban planning and investment questions through deterministic SQL. Key mandates: decoupled landing, Airflow orchestration, "
-        "SCD2 auditing, pure fact tables, and point-in-time joins."
+        "The primary mandate is delivering a robust ELT data platform ingesting short-term rental (STR) listings and demographic "
+        "census data to resolve urban housing, tourism demand, and capital investment questions. Core technical requirements include "
+        "decoupled schema landing, automated Airflow orchestration, SCD2 audit trails, pure numeric fact tables, and point-in-time joins."
     )
 
     doc.add_heading("b. Stakeholders", level=2)
     stakeholders = [
-        ("• Municipal Regulators (City of Sydney): ", "Enforce NSW's 180-day cap and monitor housing supply pressure."),
-        ("• STR Investors & Property Managers: ", "Isolate high-yield configurations (room type, capacity, price) across Sydney."),
-        ("• Tourism Analysts (Destination NSW): ", "Assess coastal vs CBD recovery trends during COVID-19 border closures."),
-        ("• Data Engineering Teams: ", "Require automated orchestration with layer isolation and reproducible builds.")
+        ("• Municipal Regulators (City of Sydney): ", "Enforce NSW's 180-day annual letting cap and assess housing affordability pressure."),
+        ("• STR Commercial Investors & Hosts: ", "Identify revenue-maximizing configurations (property type, room type, accommodates) across Sydney."),
+        ("• Tourism Analysts (Destination NSW): ", "Track coastal vs metropolitan demand recovery patterns during COVID-19 border closures."),
+        ("• Data Engineering Teams: ", "Require automated orchestration with layer isolation, testing assertions, and reproducible builds.")
     ]
     for s_title, s_desc in stakeholders:
         p = doc.add_paragraph()
@@ -364,8 +378,9 @@ def generate_report():
 
     doc.add_heading("c. Business Context & Market Dynamics", level=2)
     doc.add_paragraph(
-        "The May 2020–April 2021 window captured severe pandemic disruption in Sydney: international tourism fell >97%, collapsing "
-        "CBD occupancy, while coastal LGAs (Waverley, Northern Beaches) sustained strong domestic leisure demand at 40–60% rate premiums."
+        "The May 2020 to April 2021 study period captured severe pandemic disruption in Greater Sydney: international tourism collapsed >97%, "
+        "driving CBD apartment vacancies to historic highs, while affluent coastal enclaves (Waverley, Northern Beaches) experienced surge demand "
+        "from high-income domestic travelers, resulting in average nightly rates 40% to 60% higher than Greater Sydney baseline rates."
     )
 
     doc.add_page_break()
@@ -385,9 +400,9 @@ def generate_report():
     )
 
     doc.add_paragraph(
-        "Deployed on GCP australia-southeast1 across three services: Cloud SQL (PostgreSQL 18, instance bde-postgres, IP 35.197.167.206:5432), "
-        "Cloud Storage (bucket gs://australia-southeast1-bde-co-d0a030e5-bucket holding /dags and /data), and Cloud Composer 2 "
-        "(Airflow 2.11.1 on GKE, environment bde-composer)."
+        "Deployed on GCP australia-southeast1 across three managed cloud services: (1) Cloud SQL (PostgreSQL 18, instance bde-postgres, "
+        "Public IP 35.197.167.206:5432), (2) Cloud Storage (bucket gs://australia-southeast1-bde-co-d0a030e5-bucket holding /dags and /data), "
+        "and (3) Cloud Composer 2 (Airflow 2.11.1 on GKE Autopilot, environment bde-composer)."
     )
 
     img_comp = "reports/images/composer_environment_running.png"
@@ -401,12 +416,14 @@ def generate_report():
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
 
     doc.add_paragraph(
-        "Script sql/01_create_bronze_schema.sql provisions bronze, silver, and gold schemas. In bronze.raw_listings, all 74 Inside Airbnb "
-        "columns are typed as TEXT to absorb schema drift, with file_source and ingestion_timestamp metadata. Airflow DAG "
-        "(load_airbnb_census_dag.py) executes reference loading before monthly listing ingestion:\n"
-        "[task_load_census_g01, task_load_census_g02, task_load_lga_suburb] >> task_load_airbnb\n"
-        "The DAG inspects dag_run.conf['file'] to ingest monthly batches into raw_listings (if_exists='append'). Helper get_file_content() "
-        "resolves paths across Composer GCS mounts (/home/airflow/gcs/data) and local directories."
+        "Schema Definition & Drift Mitigation: Script sql/01_create_bronze_schema.sql provisions bronze, silver, and gold namespaces. "
+        "In bronze.raw_listings, all 74 Inside Airbnb columns are declared as raw TEXT. This defensive design absorbs upstream schema drift, "
+        "unexpected quoting, and field reordering without pipeline failure. Every record is enriched with file_source and ingestion_timestamp metadata.\n\n"
+        "DAG Flow & Parameterization: The Airflow DAG (dags/load_airbnb_census_dag.py) executes with schedule_interval=None. Reference loading "
+        "tasks execute concurrently before monthly listing ingestion: [task_load_census_g01, task_load_census_g02, task_load_lga_suburb] >> task_load_airbnb. "
+        "Dynamic execution is achieved via dag_run.conf['file'], allowing peer engineers to ingest any batch (e.g., 05_2020.csv for initial load, "
+        "subsequent months for incremental batches) using if_exists='append'. Reference tables utilize if_exists='replace' for idempotency. "
+        "The helper function get_file_content() transparently resolves file paths across Composer GCS mounts (/home/airflow/gcs/data) and local POSIX paths."
     )
 
     img_dag = "reports/images/airflow_dag_run_grid.png"
@@ -465,17 +482,19 @@ def generate_report():
     )
 
     doc.add_paragraph(
-        "Silver transformations are authored as declarative dbt views (silver.stg_listings.sql) to preserve raw data purity:\n"
-        "1. Currency Stripping: REGEXP_REPLACE(price, '[$,]', '', 'g')::NUMERIC(10, 2) removes currency symbols.\n"
-        "2. Temporal Parsing: TO_DATE(last_scraped, 'YYYY-MM-DD') and TO_TIMESTAMP parse scrape timestamps.\n"
-        "3. Boolean Normalization: CASE WHEN host_is_superhost = 't' THEN TRUE ELSE FALSE END standardizes flags.\n"
+        "Silver Cleansing View Architecture: Cleansing transformations are authored as declarative dbt views (silver.stg_listings.sql) "
+        "to maintain non-destructive transformations:\n"
+        "1. Currency Stripping: REGEXP_REPLACE(price, '[$,]', '', 'g')::NUMERIC(10, 2) strips currency formatting and casts to numeric.\n"
+        "2. Temporal Standardization: Explicit casting TO_DATE(last_scraped, 'YYYY-MM-DD') and TO_TIMESTAMP parse scrape dates into ISO timestamps.\n"
+        "3. Boolean Normalization: CASE WHEN host_is_superhost = 't' THEN TRUE ELSE FALSE END converts raw character flags to native booleans.\n"
         "4. Spatial Harmonization: LOWER(TRIM(neighbourhood)) eliminates spatial join misses against suburb reference crosswalks."
     )
 
     doc.add_paragraph(
-        "SCD Type 2 captures history without destructive overwriting. Under the hood, dbt's snapshot engine computes an MD5 surrogate hash "
-        "(dbt_scd_id = MD5(unique_key || '|' || updated_at)), compares incoming records against active rows (dbt_valid_to IS NULL), closes modified "
-        "records by setting dbt_valid_to, and inserts the new version with dbt_valid_to IS NULL."
+        "SCD Type 2 Snapshot Mechanics: Slowly Changing Dimensions preserve historical state without destructive overwrites. Under the hood, "
+        "dbt's snapshot engine computes an MD5 surrogate hash (dbt_scd_id = MD5(unique_key || '|' || updated_at)), compares incoming records "
+        "against active rows (dbt_valid_to IS NULL), closes modified records by setting dbt_valid_to to the new record's timestamp, and inserts "
+        "the new version with dbt_valid_to IS NULL. The timestamp strategy was selected because source datasets provide explicit scrape timestamps."
     )
 
     scd_img = "reports/images/scd2_timeline_diagram.png"
@@ -533,9 +552,10 @@ def generate_report():
     )
 
     doc.add_paragraph(
-        "Following Ralph Kimball's dimensional design standards, the fact table contains strictly foreign keys and numeric metrics:\n"
-        "• Fact Table (gold.fact_listings): Grain is one listing on a scrape date. Keys: listing_id, host_id, scraped_date. "
-        "Metrics: price, minimum_nights, maximum_nights, availability_30, number_of_reviews, review_scores_rating, estimated_revenue. "
+        "Dimensional Design Standards: Following Ralph Kimball's dimensional modeling standards, the fact table contains strictly foreign "
+        "keys and numerical metrics—no descriptive text attributes are permitted in facts:\n"
+        "• Fact Table (gold.fact_listings): Grain represents one listing on a scrape date. Keys: listing_id, host_id, scraped_date. "
+        "Numeric metrics: price, minimum_nights, maximum_nights, availability_30, number_of_reviews, review_scores_rating, estimated_revenue. "
         "Estimated revenue follows the brief formula: estimated_revenue = (30 - availability_30) * price.\n"
         "• Dimension Models: gold.dim_host, gold.dim_property, gold.dim_suburb, gold.dim_lga, census_g01, census_g02 maintain descriptive context."
     )
@@ -551,7 +571,8 @@ def generate_report():
         r_cap.font.color.rgb = RGBColor(100, 100, 100)
 
     doc.add_paragraph(
-        "To prevent temporal lookahead bias, dimension joins evaluate transactions strictly against the dimension record effective at transaction time:"
+        "Point-in-Time Temporal Joins: To prevent temporal lookahead bias (data leakage), transactions are evaluated strictly against the "
+        "dimension record effective at transaction time:"
     )
     add_code_block(doc,
         "ON fact.listing_id = dim_prop.listing_id\n"
@@ -560,12 +581,15 @@ def generate_report():
     )
 
     doc.add_paragraph(
-        "Three specialized datamarts provide pre-aggregated business views:\n"
-        "1. dm_listing_neighbourhood: 9 monthly neighbourhood metrics. MoM active listings growth percentage is derived via:\n"
-        "ROUND(100.0 * (COUNT(f.listing_id) - LAG(COUNT(f.listing_id)) OVER (PARTITION BY s.suburb_name ORDER BY DATE_TRUNC('month', f.scraped_date))) / "
-        "NULLIF(LAG(COUNT(f.listing_id)) OVER (PARTITION BY s.suburb_name ORDER BY DATE_TRUNC('month', f.scraped_date)), 0), 2).\n"
-        "2. dm_property_type: Multi-dimensional performance across property_type, room_type, accommodates, and year_month.\n"
-        "3. dm_host_neighbourhood: Evaluates host concentration and estimated revenue by host_neighbourhood_lga."
+        "Three specialized analytical datamarts provide pre-aggregated multi-dimensional business views:\n"
+        "1. dm_listing_neighbourhood: Computes 9 monthly metrics for each listing neighbourhood: active listing count, minimum/maximum/median/average "
+        "nightly price, distinct host count, superhost percentage, total estimated revenue, and average revenue per active listing. "
+        "Crucially, Month-over-Month (MoM) active listings growth percentage is derived using SQL window functions:\n"
+        "ROUND(100.0 * (COUNT(listing_id) - LAG(COUNT(listing_id)) OVER (PARTITION BY neighbourhood_name ORDER BY year_month)) / "
+        "NULLIF(LAG(COUNT(listing_id)) OVER (PARTITION BY neighbourhood_name ORDER BY year_month), 0), 2).\n"
+        "2. dm_property_type: Multi-dimensional performance across property_type, room_type, accommodates, and year_month, evaluating supply volume, "
+        "average stay duration, and revenue yields.\n"
+        "3. dm_host_neighbourhood: Evaluates host concentration, multi-listing operator prevalence, and total estimated revenue mapped to host LGA locations."
     )
 
     doc.add_page_break()
@@ -787,7 +811,21 @@ def generate_report():
         p.add_run(out)
 
     doc.add_heading("7.6 Operational Replication Checklist for Peer Engineers", level=2)
-    doc.add_paragraph("Validated against automated assertions and database checks:")
+    doc.add_paragraph("To reproduce the complete pipeline end-to-end on local Docker or GCP Cloud Composer, execute the following verified CLI sequence:")
+    add_code_block(doc,
+        "# 1. Launch local Docker infrastructure or connect to Cloud SQL\n"
+        "docker compose up -d\n"
+        "# 2. Initialize Bronze schemas & trigger Airflow ingestion\n"
+        "psql -h 35.197.167.206 -U postgres -d postgres -f sql/01_create_bronze_schema.sql\n"
+        "airflow dags trigger load_airbnb_census_dag\n"
+        "# 3. Execute dbt Silver staging views & SCD Type 2 snapshots\n"
+        "dbt run --select stg_listings\n"
+        "dbt snapshot\n"
+        "# 4. Build Gold Star Schema, analytical datamarts & test assertions\n"
+        "dbt run --select gold\n"
+        "dbt test"
+    )
+    doc.add_paragraph("Audit accounting validated against automated assertions and database checks:")
 
     tbl_check = doc.add_table(rows=1, cols=4)
     format_table(
