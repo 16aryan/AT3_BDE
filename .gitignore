@@ -17,3 +17,5 @@ ENV/
 .AppleDouble
 .LSOverride
 Thumbs.db
+~
+BDE-AT2-*.pdf
