@@ -109,20 +109,22 @@ Raw CSV Datasets
 │   │   ├── silver/stg_listings.sql     # Silver staging view
 │   │   ├── gold/                       # Star schema dims, facts, and census
 │   │   └── datamart/                   # 3 required business datamart views
-│   └── snapshots/                      # SCD Type 2 dimension snapshots
+│   ├── snapshots/                      # SCD Type 2 dimension snapshots
+│   └── tests/                          # 5 custom business & data integrity tests
+├── dbt_submission_files.zip            # Clean dbt submission archive (models, snapshots, tests, macros)
 ├── docker-compose.yml                  # Production Docker stack (Airflow 2.8 + Postgres 15)
 ├── reports/
-│   ├── Assignment_3_Report_Aryan_Goel.docx  # Complete formatted Word report
+│   ├── Assignment_3_Report_Aryan_Goel.docx  # Complete formatted Word report (HD academic styling)
 │   ├── README.md                       # Figures catalog
-│   └── images/                         # 6 publication-quality diagrams
+│   └── images/                         # 8 publication-quality charts & diagrams (300 DPI)
 ├── scripts/
-│   ├── generate_sample_data.py         # Test dataset generator
+│   ├── build_hd_report_docx.py         # Word report generator with authentic tables
 │   ├── generate_report_diagrams.py     # 300 DPI diagram renderer
 │   └── pipeline_runner.py              # End-to-end execution & validation runner
 └── sql/
     ├── 00_init_postgres_users.sql      # Container database & user initialization
-    ├── 01_create_bronze_schema.sql     # Schema DDL for DBeaver / PostgreSQL
-    └── 02_ad_hoc_analysis.sql          # Part 4 ad-hoc analytical queries
+    ├── part_1.sql                      # Bronze schema DDL (also 01_create_bronze_schema.sql)
+    └── part_4.sql                      # Part 4 ad-hoc analytical queries (Questions A to E)
 ```
 
 ---
@@ -132,10 +134,10 @@ Raw CSV Datasets
 | Brief Component | Implementation | Location |
 | :--- | :--- | :--- |
 | **Part 1: Airflow Ingestion** | Ingests initial month & reference datasets to Bronze | [`dags/load_airbnb_census_dag.py`](dags/load_airbnb_census_dag.py) |
-| **Part 1: Bronze Schema** | Raw tables created via DDL | [`sql/01_create_bronze_schema.sql`](sql/01_create_bronze_schema.sql) |
+| **Part 1: Bronze Schema** | Raw tables created via DDL | [`sql/part_1.sql`](sql/part_1.sql) |
 | **Part 2: Medallion Architecture** | Cleaned staging & SCD2 snapshots | [`dbt_bde/models/silver/`](dbt_bde/models/silver/), [`dbt_bde/snapshots/`](dbt_bde/snapshots/) |
 | **Part 2: Gold Star Schema** | Fact (IDs & metrics only) + 4 dimensions + 2 Census | [`dbt_bde/models/gold/`](dbt_bde/models/gold/) |
 | **Part 2: 3 Datamart Views** | SCD2 point-in-time join logic & all formulas | [`dbt_bde/models/datamart/`](dbt_bde/models/datamart/) |
 | **Part 3: Sequential Ingestion** | Chronological 12-month incremental loads with dbt | [`scripts/pipeline_runner.py`](scripts/pipeline_runner.py) |
-| **Part 4: Ad-Hoc Analytics** | SQL answering questions (a), (b), (c) | [`sql/02_ad_hoc_analysis.sql`](sql/02_ad_hoc_analysis.sql) |
+| **Part 4: Ad-Hoc Analytics** | SQL answering questions (A) through (E) | [`sql/part_4.sql`](sql/part_4.sql) |
 | **Full Written Report** | Academic report with figures & empirical findings | [`reports/Assignment_3_Report_Aryan_Goel.docx`](reports/Assignment_3_Report_Aryan_Goel.docx) |

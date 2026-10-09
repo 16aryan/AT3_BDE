@@ -14,8 +14,10 @@ All diagrams were generated in Python at 300 DPI using `scripts/generate_report_
 | **Figure 2** | `images/star_schema_erd.png` | **Gold Layer Star Schema & Reference ERD**: Entity-Relationship diagram showing `fact_listings` (IDs & metrics only) linked to `dim_host`, `dim_property`, `dim_suburb`, and `dim_lga`. |
 | **Figure 3** | `images/scd2_timeline_diagram.png` | **SCD Type 2 Point-in-Time Join Logic**: Illustrates how dimension attribute changes (e.g. host superhost status) are tracked over time via `dbt_valid_from` / `dbt_valid_to` and matched to listing fact dates. |
 | **Figure 4** | `images/chart_q1_top_bottom_lgas.png` | **Part 4 Question A Chart**: Comparison of 12-month lodging revenue alongside Census weekly household income and average household size for Top 3 vs Bottom 3 LGAs. |
-| **Figure 5** | `images/chart_q2_median_age_vs_revenue.png` | **Part 4 Question B Chart**: Scatter plot and regression trendline showing positive correlation ($r = +0.4450$) between resident median age and listing revenue. |
+| **Figure 5** | `images/chart_q2_median_age_vs_revenue.png` | **Part 4 Question B Chart**: Scatter plot and regression trendline showing positive correlation ($r = +0.6561$) between resident median age and listing revenue. |
 | **Figure 6** | `images/chart_q3_top5_neighbourhoods_stays.png` | **Part 4 Question C Chart**: Optimal accommodation configuration (`property_type`, `room_type`, `accommodates`) yielding the highest number of stays in the top 5 revenue suburbs. |
+| **Figure 7** | `images/chart_q4_host_concentration.png` | **Part 4 Question D Chart**: Geographic concentration of multi-listing hosts (78.3% single-LGA focused vs 21.7% multi-LGA operators). |
+| **Figure 8** | `images/chart_q5_mortgage_coverage.png` | **Part 4 Question E Chart**: Percentage of annual median mortgage covered by single-listing Airbnb revenue across Sydney LGAs. |
 
 ---
 

@@ -6,9 +6,8 @@ WITH fact_joined_scd2 AS (
     SELECT
         f.listing_id,
         f.host_id,
-        f.scraped_date,
-        f.month_year,
-        f.has_availability,
+        TO_CHAR(f.scraped_date, 'YYYY-MM') AS month_year,
+        p.has_availability,
         f.price,
         f.availability_30,
         f.review_scores_rating,

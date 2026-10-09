@@ -1,5 +1,5 @@
 -- Gold Fact: Fact Listings
--- Star Schema Fact table containing ONLY IDs, dates, and metrics
+-- Star Schema Fact table containing ONLY IDs, dates, and numeric metrics
 {{ config(materialized='table') }}
 
 WITH stg AS (
@@ -14,14 +14,15 @@ SELECT
     listing_id,
     host_id,
     scraped_date,
-    month_year,
 
-    -- Attributes / Flags
-    has_availability,
-
-    -- Metrics
+    -- Numeric Metrics & Flags ONLY (Kimball dimensional standard)
     price,
     availability_30,
+    CASE 
+        WHEN has_availability = 't' THEN 1 
+        ELSE 0 
+    END AS has_availability_flag,
+
     review_scores_rating,
     number_of_reviews,
 

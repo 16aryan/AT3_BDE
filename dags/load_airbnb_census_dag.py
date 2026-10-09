@@ -68,10 +68,11 @@ def get_file_content(file_path_or_blob_name):
                 continue
 
     # 3. Local file system fallback
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     local_candidates = [
         os.path.join(LOCAL_DATA_DIR, base),
-        os.path.join('/Users/aryan/AT3_BDE/data', base),
-        os.path.join('./data', base),
+        os.path.join(script_dir, '..', 'data', base),
+        os.path.join('.', 'data', base),
     ]
     for p in local_candidates:
         if os.path.exists(p):
@@ -89,20 +90,21 @@ def load_census_g01(**kwargs):
     try:
         content = get_file_content(file_name)
         df = pd.read_csv(content, dtype=str)
-        # Standardize column names (lowercase)
         df.columns = [c.strip().lower() for c in df.columns]
         
-        # Map LGA code column if needed
-        lga_col = [c for c in df.columns if 'lga' in c]
-        if lga_col and lga_col[0] != 'lga_code':
-            df.rename(columns={lga_col[0]: 'lga_code'}, inplace=True)
+        # Ensure standard lga_code_2016 column exists for dbt models
+        if 'lga_code_2016' not in df.columns:
+            lga_col = [c for c in df.columns if 'lga' in c]
+            if lga_col:
+                df.rename(columns={lga_col[0]: 'lga_code_2016'}, inplace=True)
             
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         engine = pg_hook.get_sqlalchemy_engine()
         df.to_sql('raw_census_g01', engine, schema='bronze', if_exists='replace', index=False)
         logging.info("Successfully loaded bronze.raw_census_g01")
     except Exception as e:
-        logging.warning(f"Could not load {file_name}: {e}. Ensure file is present in bucket/data dir.")
+        logging.error(f"Failed to load {file_name}: {e}")
+        raise e
 
 
 def load_census_g02(**kwargs):
@@ -115,16 +117,18 @@ def load_census_g02(**kwargs):
         df = pd.read_csv(content, dtype=str)
         df.columns = [c.strip().lower() for c in df.columns]
         
-        lga_col = [c for c in df.columns if 'lga' in c]
-        if lga_col and lga_col[0] != 'lga_code':
-            df.rename(columns={lga_col[0]: 'lga_code'}, inplace=True)
+        if 'lga_code_2016' not in df.columns:
+            lga_col = [c for c in df.columns if 'lga' in c]
+            if lga_col:
+                df.rename(columns={lga_col[0]: 'lga_code_2016'}, inplace=True)
             
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         engine = pg_hook.get_sqlalchemy_engine()
         df.to_sql('raw_census_g02', engine, schema='bronze', if_exists='replace', index=False)
         logging.info("Successfully loaded bronze.raw_census_g02")
     except Exception as e:
-        logging.warning(f"Could not load {file_name}: {e}. Ensure file is present in bucket/data dir.")
+        logging.error(f"Failed to load {file_name}: {e}")
+        raise e
 
 
 def load_lga_suburb(**kwargs):
@@ -133,8 +137,19 @@ def load_lga_suburb(**kwargs):
     logging.info(f"Loading {file_name} into bronze.raw_lga_suburb")
     
     try:
-        content = get_file_content(file_name)
-        df = pd.read_csv(content, dtype=str)
+        try:
+            content = get_file_content(file_name)
+            df = pd.read_csv(content, dtype=str)
+        except Exception:
+            # Fallback to dynamic join of NSW_LGA_SUBURB.csv and NSW_LGA_CODE.csv if combined file missing
+            c_suburb = get_file_content('NSW_LGA_SUBURB.csv')
+            c_code = get_file_content('NSW_LGA_CODE.csv')
+            df_suburb = pd.read_csv(c_suburb, dtype=str)
+            df_code = pd.read_csv(c_code, dtype=str)
+            df_suburb.columns = [c.strip().lower() for c in df_suburb.columns]
+            df_code.columns = [c.strip().lower() for c in df_code.columns]
+            df = df_suburb.merge(df_code, on='lga_code', how='inner')
+
         df.columns = [c.strip().lower() for c in df.columns]
         
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
@@ -142,7 +157,8 @@ def load_lga_suburb(**kwargs):
         df.to_sql('raw_lga_suburb', engine, schema='bronze', if_exists='replace', index=False)
         logging.info("Successfully loaded bronze.raw_lga_suburb")
     except Exception as e:
-        logging.warning(f"Could not load {file_name}: {e}. Ensure file is present in bucket/data dir.")
+        logging.error(f"Failed to load LGA Suburb mapping: {e}")
+        raise e
 
 
 def load_airbnb_listings(**kwargs):
@@ -161,6 +177,7 @@ def load_airbnb_listings(**kwargs):
     
     content = get_file_content(file_name)
     df = pd.read_csv(content, dtype=str, low_memory=False)
+    df.columns = [c.strip().lower() for c in df.columns]
     df['file_source'] = file_name
     df['ingestion_timestamp'] = datetime.utcnow().isoformat()
     
@@ -185,25 +202,21 @@ with DAG(
     task_load_census_g01 = PythonOperator(
         task_id='load_census_g01',
         python_callable=load_census_g01,
-        provide_context=True,
     )
 
     task_load_census_g02 = PythonOperator(
         task_id='load_census_g02',
         python_callable=load_census_g02,
-        provide_context=True,
     )
 
     task_load_lga_suburb = PythonOperator(
         task_id='load_lga_suburb_mapping',
         python_callable=load_lga_suburb,
-        provide_context=True,
     )
 
     task_load_airbnb = PythonOperator(
         task_id='load_airbnb_monthly_listings',
         python_callable=load_airbnb_listings,
-        provide_context=True,
     )
 
     # Reference data can be loaded in parallel, Airbnb listings alongside

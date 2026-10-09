@@ -12,6 +12,7 @@ SELECT
     bedrooms,
     beds,
     listing_neighbourhood,
+    has_availability,
     dbt_valid_from,
     dbt_valid_to,
     CASE WHEN dbt_valid_to IS NULL THEN TRUE ELSE FALSE END AS is_current

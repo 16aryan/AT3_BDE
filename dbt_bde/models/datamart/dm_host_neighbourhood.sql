@@ -7,8 +7,8 @@ WITH fact_joined_scd2 AS (
         f.listing_id,
         f.host_id,
         f.scraped_date,
-        f.month_year,
-        f.has_availability,
+        TO_CHAR(f.scraped_date, 'YYYY-MM') AS month_year,
+        p.has_availability,
         f.price,
         f.availability_30,
         f.number_of_stays,
@@ -16,6 +16,11 @@ WITH fact_joined_scd2 AS (
         -- SCD2 joined host attributes:
         h.host_neighbourhood
     FROM {{ ref('fact_listings') }} f
+    -- Join Property Dimension for availability status
+    LEFT JOIN {{ ref('dim_property') }} p
+        ON f.listing_id = p.listing_id
+        AND f.scraped_date >= p.dbt_valid_from
+        AND (f.scraped_date < p.dbt_valid_to OR p.dbt_valid_to IS NULL)
     -- Join Host Dimension using SCD Type 2 point-in-time validity
     LEFT JOIN {{ ref('dim_host') }} h
         ON f.host_id = h.host_id

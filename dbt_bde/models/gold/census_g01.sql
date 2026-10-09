@@ -2,7 +2,8 @@
 {{ config(materialized='table') }}
 
 SELECT
-    TRIM(lga_code) AS lga_code,
+    REGEXP_REPLACE(TRIM(lga_code_2016), '^LGA', '') AS lga_code,
+    TRIM(lga_code_2016) AS lga_code_2016,
     COALESCE(NULLIF(TRIM(tot_p_m), '')::NUMERIC, 0) AS tot_p_m,
     COALESCE(NULLIF(TRIM(tot_p_f), '')::NUMERIC, 0) AS tot_p_f,
     COALESCE(NULLIF(TRIM(tot_p_p), '')::NUMERIC, 0) AS tot_p_p,
@@ -18,4 +19,4 @@ SELECT
     COALESCE(NULLIF(TRIM(age_75_84_yr_p), '')::NUMERIC, 0) AS age_75_84_yr_p,
     COALESCE(NULLIF(TRIM(age_85ov_p), '')::NUMERIC, 0) AS age_85ov_p
 FROM {{ source('bronze', 'raw_census_g01') }}
-WHERE lga_code IS NOT NULL AND TRIM(lga_code) != ''
+WHERE lga_code_2016 IS NOT NULL AND TRIM(lga_code_2016) != ''

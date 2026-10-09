@@ -10,29 +10,47 @@
     )
 }}
 
-WITH base_suburbs AS (
-    SELECT DISTINCT ON (listing_neighbourhood, scraped_date)
-        listing_neighbourhood AS suburb_name,
-        scraped_date
-    FROM {{ ref('stg_listings') }}
-    WHERE listing_neighbourhood IS NOT NULL
-    ORDER BY listing_neighbourhood, scraped_date DESC
+WITH min_scrape AS (
+    SELECT DATE '2020-01-01' AS scraped_date
 ),
 
-mapping AS (
+lga_mapping AS (
+    -- Priority 1: Match directly against LGA name (since Inside Airbnb listing_neighbourhood uses LGAs)
     SELECT DISTINCT
-        LOWER(TRIM(suburb_name)) AS suburb_name,
+        LOWER(TRIM(lga_name)) AS match_name,
+        TRIM(lga_name) AS suburb_name,
         TRIM(lga_code) AS lga_code,
-        TRIM(lga_name) AS lga_name
+        TRIM(lga_name) AS lga_name,
+        1 AS priority
     FROM {{ source('bronze', 'raw_lga_suburb') }}
+    WHERE lga_name IS NOT NULL AND TRIM(lga_name) != ''
+    UNION ALL
+    -- Priority 2: Individual Suburbs from NSW LGA Suburb mapping
+    SELECT DISTINCT
+        LOWER(TRIM(suburb_name)) AS match_name,
+        INITCAP(TRIM(suburb_name)) AS suburb_name,
+        TRIM(lga_code) AS lga_code,
+        TRIM(lga_name) AS lga_name,
+        2 AS priority
+    FROM {{ source('bronze', 'raw_lga_suburb') }}
+    WHERE suburb_name IS NOT NULL AND TRIM(suburb_name) != ''
+),
+
+dedup_mapping AS (
+    SELECT DISTINCT ON (match_name)
+        suburb_name,
+        lga_code,
+        lga_name
+    FROM lga_mapping
+    ORDER BY match_name, priority ASC
 )
 
 SELECT
-    b.suburb_name,
-    COALESCE(m.lga_code, 'LGA_UNKNOWN') AS lga_code,
-    COALESCE(m.lga_name, 'Unknown LGA') AS lga_name,
-    b.scraped_date
-FROM base_suburbs b
-LEFT JOIN mapping m ON b.suburb_name = m.suburb_name
+    d.suburb_name,
+    d.lga_code,
+    d.lga_name,
+    m.scraped_date
+FROM dedup_mapping d
+CROSS JOIN min_scrape m
 
 {% endsnapshot %}

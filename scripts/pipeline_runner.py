@@ -37,9 +37,18 @@ def get_engine():
 
 def run_dbt(command):
     """Executes a dbt command inside the dbt_bde project directory"""
-    full_cmd = f"dbt {command} --profiles-dir {DBT_DIR} --project-dir {DBT_DIR}"
+    dbt_bin = os.getenv("DBT_BIN", "/opt/miniconda3/bin/dbt" if os.path.exists("/opt/miniconda3/bin/dbt") else "dbt")
+    full_cmd = f"{dbt_bin} {command} --profiles-dir {DBT_DIR} --project-dir {DBT_DIR}"
     print(f"\n[DBT] Executing: {full_cmd}")
-    res = subprocess.run(full_cmd, shell=True)
+    env = os.environ.copy()
+    env.update({
+        "DBT_USER": DB_USER,
+        "DBT_PASSWORD": DB_PASS,
+        "DBT_HOST": DB_HOST,
+        "DBT_PORT": DB_PORT,
+        "DBT_DBNAME": DB_NAME
+    })
+    res = subprocess.run(full_cmd, shell=True, env=env)
     if res.returncode != 0:
         print(f"[DBT Warning] Command exited with code {res.returncode}")
     return res.returncode
@@ -129,7 +138,7 @@ def part4_ad_hoc_analysis():
     print("\n=======================================================")
     print("PART 4: Ad-Hoc Analytical Queries")
     print("=======================================================")
-    sql_path = os.path.join(os.path.dirname(__file__), "..", "sql", "02_ad_hoc_analysis.sql")
+    sql_path = os.path.join(os.path.dirname(__file__), "..", "sql", "part_4.sql")
     with open(sql_path, "r") as f:
         sql_content = f.read()
 
@@ -139,18 +148,21 @@ def part4_ad_hoc_analysis():
     labels = [
         "Question A: Top 3 vs Bottom 3 LGAs Demographics Comparison",
         "Question B: Pearson Correlation (Median Age vs Avg Revenue)",
-        "Question C: Best Listing Configuration for Top 5 Neighbourhoods"
+        "Question C: Best Listing Configuration for Top 5 Neighbourhoods",
+        "Question D: Host Concentration Across LGAs",
+        "Question E: Single-Listing Hosts vs Median Mortgage Repayments"
     ]
 
-    for i, q in enumerate(queries[:3]):
+    for i, q in enumerate(queries[:5]):
         label = labels[i] if i < len(labels) else f"Query {i+1}"
-        print(f"\n>>> {label} <<<")
+        print(f"\n=======================================================")
+        print(f">>> {label} <<<")
+        print(f"=======================================================")
         try:
             with engine.connect() as conn:
                 df = pd.read_sql_query(text(q.replace("%", "%%")), conn)
             print(df.to_string(index=False))
         except Exception as e:
-            # Fallback using raw connection
             try:
                 raw_conn = engine.raw_connection()
                 df = pd.read_sql_query(q, raw_conn)
