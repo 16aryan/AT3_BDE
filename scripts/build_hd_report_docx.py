@@ -468,7 +468,7 @@ def generate_report():
 
     doc.add_paragraph(
         "Silver Cleansing & Normalization (silver.stg_listings.sql): Authored as a declarative dbt view executing the following cleansing operations:\n"
-        "1. Currency Sanitization & Defensive Defaults: Uses REGEXP_REPLACE(price, '[^0-9.]', '', 'g')::NUMERIC to eliminate currency symbols and commas, casting to decimal. Missing prices coalesce via COALESCE(..., 0.0) to preserve staging row volume, while analytical queries filter unlisted zero-values.\n"
+        "1. Currency Sanitization & Defensive Defaults: Uses REGEXP_REPLACE(price, '[^0-9.]', '', 'g')::NUMERIC to eliminate currency symbols and commas, casting to decimal. Missing prices coalesce via COALESCE(..., 0.0) to preserve staging record volume; because datamarts aggregate these directly, unlisted zero-dollar items are retained in calculations, pulling down minimum and average pricing as a documented design choice and known limitation.\n"
         "2. July Date Anomaly Alignment: Canonical month_year is derived directly from file_source, and out-of-month scrape dates in 07_2020.csv (such as anomalous September timestamps) are aligned to the 14th of the file's month ((file_month_year || '-14')::DATE).\n"
         "3. Property Type Harmonization: Pre-August generic categories (e.g. Apartment, House, Hotel, Hostel) are standardized to post-August naming (e.g. Entire apartment, Private room in house, Room in hotel) across 100% of rows via comprehensive CASE mapping.\n"
         "4. End-to-End Deduplication: Enforced via DISTINCT ON (listing_id, scraped_date) ORDER BY listing_id, scraped_date, ingestion_timestamp DESC NULLS LAST, guaranteeing exact single-record cardinality and idempotent batch re-execution."
@@ -503,9 +503,9 @@ def generate_report():
     doc.add_paragraph(
         "Gold Star Schema Design Standards: Following Ralph Kimball's dimensional modeling standards, the fact table contains strictly "
         "foreign keys and numerical metrics—no descriptive text attributes reside in facts:\n"
-        "• Fact Table (gold.fact_listings): 412,122 rows. Keys: fact_listing_id, listing_id, host_id, suburb_name, lga_code, scraped_date. "
-        "Numeric metrics: price, has_availability_flag (1/0), availability_30, number_of_reviews, review_scores_rating, estimated_revenue, number_of_stays. "
-        "Estimated revenue follows the brief formula: estimated_revenue = (30 - availability_30) * price.\n"
+        "• Fact Table (gold.fact_listings): 412,122 rows. Grain & Keys: fact_listing_id (MD5 hash), listing_id, host_id, scraped_date. "
+        "Numeric metrics & flags only: price, has_availability_flag (1/0), availability_30, number_of_reviews, review_scores_rating, number_of_stays, "
+        "estimated_revenue ((30 - availability_30) * price). Spatial dimensions (suburb_name, lga_code) are joined dynamically via dim_property and dim_suburb point-in-time links.\n"
         "• Dimension Models: gold.dim_host (34,610 rows), gold.dim_property (49,072 rows), gold.dim_suburb (4,520 rows), gold.dim_lga (128 rows), "
         "census_g01 (132 rows), and census_g02 (132 rows) maintain conformed descriptive context."
     )
@@ -844,7 +844,7 @@ def generate_report():
 
         ("7.3 July Scrape Date Anomaly & September Double-Count Fix",
          "File 07_2020.csv contained 4,780 rows stamped with future scrape dates (2020-09-05). Naive pipelines deriving month from scrape date undercounted July (31,277) and inflated September (39,609 with duplicate listings).",
-         "In silver.stg_listings, derived canonical month_year strictly from file_source and re-aligned out-of-month scrape dates to July's modal scrape date (2020-07-14).",
+         "In silver.stg_listings, derived canonical month_year strictly from file_source and re-aligned any out-of-month scrape dates directly to the 14th of the file's month ((file_month_year || '-14')::DATE).",
          "Restored exact monthly volume (July: 36,057, September: 34,829), eliminated 4,758 duplicate listings in September, and ensured flawless temporal joins."),
 
         ("7.4 Property Type Harmonization Across Longitudinal Batches",
