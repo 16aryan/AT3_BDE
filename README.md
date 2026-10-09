@@ -4,41 +4,58 @@
 **Student Name:** Aryan Goel  
 **Student ID:** 26040826  
 **Repository:** [https://github.com/16aryan/AT3_BDE](https://github.com/16aryan/AT3_BDE)  
-**Report Document:** [`reports/Assignment_3_Report_Aryan_Goel.docx`](reports/Assignment_3_Report_Aryan_Goel.docx) | [`Assignment_3_Report.md`](Assignment_3_Report.md)
+**Handover Reports:** [`reports/Assignment_3_Report_Aryan_Goel.docx`](reports/Assignment_3_Report_Aryan_Goel.docx) | [`Assignment_3_Report.md`](Assignment_3_Report.md)  
+**Environment:** Validated locally on Docker (PostgreSQL 15, Airflow 2.8.1, dbt Core 1.11); Deployed to Google Cloud Platform (Cloud Composer 2 Airflow 2.11, Cloud SQL PostgreSQL 18)
 
 ---
 
-## 🚀 Quickstart for Instructors & Markers (Running the DAG)
+## 🚀 Quickstart for Instructors & Markers
 
-To run the pipeline and inspect the DAG execution outside GCP, you can start the complete environment in **one command** using Docker Compose.
+The pipeline is fully portable and can be evaluated either **locally on Docker** or on **Google Cloud Platform (Cloud Composer & Cloud SQL)**.
 
-### Step 1: Start Airflow & PostgreSQL
+### Option A: Local Evaluation via Docker (1-Command)
+
+#### 1. Start Airflow & PostgreSQL
 ```bash
 git clone https://github.com/16aryan/AT3_BDE.git
 cd AT3_BDE
 docker compose up -d
 ```
-*(This starts PostgreSQL 15, initializes the Bronze schema and tables, and starts the Apache Airflow 2.8 Webserver & Scheduler).*
+*(Starts PostgreSQL 15, initializes the Bronze schema and tables, and boots Apache Airflow 2.8.1 Webserver & Scheduler).*
 
-### Step 2: Open the Airflow Web UI
-1. Open your browser to: **[http://localhost:8080](http://localhost:8080)**
-2. Log in with:
-   - **Username:** `admin`
-   - **Password:** `admin`
-3. Locate **`load_airbnb_census_dag`** and toggle it **ON / Unpause**.
-
-### Step 3: Trigger the DAG
-* **Via Web UI:** Click the **Trigger DAG** (▶ play) button.
-* **Via Terminal CLI (Alternative):**
+#### 2. Trigger the Airflow DAG
+* **Via Web UI:** Open **[http://localhost:8080](http://localhost:8080)** (login: `admin` / `admin`), unpause `load_airbnb_census_dag`, and click **Trigger DAG** (▶).
+* **Via Terminal CLI:**
   ```bash
   docker exec -it bde_airflow_scheduler airflow dags trigger load_airbnb_census_dag
   ```
-Navigate to **Graph View** or **Grid View** to see all tasks (`load_census_g01`, `load_census_g02`, `load_lga_suburb_mapping`, `load_airbnb_monthly_listings`) complete with **100% green SUCCESS**.
+All tasks (`load_census_g01`, `load_census_g02`, `load_lga_suburb_mapping`, `load_airbnb_monthly_listings`) complete with **100% green SUCCESS**.
 
-### Step 4: Run the Complete dbt Warehouse & Analytics (1-Command)
-To execute dbt snapshots (SCD Type 2), build the Star Schema (Bronze, Silver, Gold), materialize the 3 Datamart views, and print the Part 4 Ad-Hoc Analytics:
+#### 3. Run dbt Transformations & Analytical Queries
 ```bash
 python3 scripts/pipeline_runner.py --part all
+```
+*(Executes dbt snapshots for SCD Type 2, builds the Kimball Star Schema and Datamarts, runs 29 automated tests, and displays the Part 4 SQL analytics).*
+
+---
+
+### Option B: Google Cloud Platform (Cloud Composer 2 & Cloud SQL)
+
+The platform is operational on Google Cloud Platform:
+* **Cloud Composer 2 (Airflow 2.11):** Environment `bde-composer` in `australia-southeast1` (Sydney).
+* **Cloud SQL (PostgreSQL 18):** Instance `bde-postgres` in `australia-southeast1` (Sydney).
+* **Airflow Connection:** `postgres_default` configured via PostgresHook.
+* **Storage Abstraction:** The DAG dynamically discovers files across `/home/airflow/gcs/data` (Composer FUSE mount), GCSHook, and `/opt/airflow/data` (local).
+
+To run dbt against Cloud SQL from your CLI:
+```bash
+cd dbt_bde
+export DBT_HOST=<CLOUD_SQL_IP>
+export DBT_PASSWORD=<YOUR_PASSWORD>
+dbt run --select stg_listings
+dbt snapshot
+dbt run --select gold
+dbt test
 ```
 
 ---
@@ -46,24 +63,24 @@ python3 scripts/pipeline_runner.py --part all
 ## Architecture Overview
 
 ```
-Raw CSV Datasets
+Raw CSV Datasets (12 Monthly Airbnb CSVs + Census G01/G02 + Suburb Mapping)
        │
        ▼  (Airflow DAG: load_airbnb_census_dag)
 ┌──────────────────────────────────────────────────────────┐
 │ BRONZE SCHEMA (PostgreSQL)                               │
-│ - raw_listings (74 columns + audit metadata)             │
+│ - raw_listings (22 attributes + lineage metadata)        │
 │ - raw_census_g01 (2016 Census Person characteristics)   │
 │ - raw_census_g02 (2016 Census Medians and Averages)     │
-│ - raw_lga_suburb (LGA to Suburb lookup)                  │
+│ - raw_lga_suburb (LGA to Suburb crosswalk)               │
 └──────────────────────────┬───────────────────────────────┘
                            │
                            ▼  (dbt Staging & Snapshots)
 ┌──────────────────────────────────────────────────────────┐
 │ SILVER SCHEMA (PostgreSQL)                               │
-│ - stg_listings (View: typed, currency cleaned, dates)    │
-│ - snapshot_host (SCD2 snapshot with timestamp strategy)  │
-│ - snapshot_property (SCD2 snapshot with timestamp)       │
-│ - snapshot_suburb_lga (SCD2 snapshot with timestamp)     │
+│ - stg_listings (View: sanitized types, currency regex)   │
+│ - snapshot_host (SCD2 snapshot: state-start strategy)    │
+│ - snapshot_property (SCD2 snapshot: state-start)         │
+│ - snapshot_suburb_lga (SCD2 snapshot: crosswalk)         │
 └──────────────────────────┬───────────────────────────────┘
                            │
                            ▼  (dbt Gold Models & Datamarts)
@@ -71,22 +88,24 @@ Raw CSV Datasets
 │ GOLD SCHEMA (PostgreSQL)                                 │
 │ 1. Star Schema Dimensions:                               │
 │    - dim_host, dim_property, dim_suburb, dim_lga         │
-│ 2. Reference Tables:                                     │
+│ 2. Demographic Dimensions:                               │
 │    - census_g01, census_g02                              │
-│ 3. Fact Table:                                           │
-│    - fact_listings (IDs, dates, and metrics ONLY)        │
+│ 3. Kimball Fact Table:                                   │
+│    - fact_listings (surrogate IDs and metrics ONLY)      │
 │ 4. Datamart Views (Point-in-Time SCD2 Joins):            │
-│    - dm_listing_neighbourhood                            │
-│    - dm_property_type                                    │
-│    - dm_host_neighbourhood                               │
+│    - dm_listing_neighbourhood (MoM growth, rev, active)  │
+│    - dm_property_type (MoM pricing & capacity metrics)   │
+│    - dm_host_neighbourhood (Host concentration metrics)  │
 └──────────────────────────┬───────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────┐
-│ PART 4: AD-HOC BUSINESS ANALYTICS                        │
-│ - Q(a): Demographics Top 3 vs Bottom 3 LGAs              │
-│ - Q(b): Pearson Correlation (Median Age vs Revenue)      │
-│ - Q(c): Optimal Listing Configuration for Top 5 Suburbs  │
+│ PART 4: AD-HOC SQL ANALYTICS                             │
+│ - Q(a): Demographics in Top 3 vs Bottom 3 Revenue LGAs   │
+│ - Q(b): Pearson Correlation Analysis (Median Age vs Rev) │
+│ - Q(c): Optimal Property Configuration in Top 5 Suburbs  │
+│ - Q(d): Host Portfolio Concentration Across LGAs         │
+│ - Q(e): Single-Listing Hosts vs Annual Median Mortgages  │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -97,47 +116,49 @@ Raw CSV Datasets
 ```
 .
 ├── dags/
-│   └── load_airbnb_census_dag.py       # Production Airflow DAG (schedule_interval=None)
-├── data/                               # 12 monthly CSVs & Census reference files
+│   └── load_airbnb_census_dag.py       # Production Airflow DAG (portable: Docker + Composer)
+├── data/                               # 12 monthly Airbnb CSVs & Census reference files
 ├── dbt_bde/
-│   ├── dbt_project.yml                 # dbt project configurations
-│   ├── profiles.yml                    # Postgres connection profiles
+│   ├── dbt_project.yml                 # dbt project configuration
+│   ├── profiles.yml                    # Postgres connection profiles (supports env vars)
 │   ├── macros/
 │   │   └── generate_schema_name.sql    # Custom schema naming (bronze/silver/gold)
 │   ├── models/
 │   │   ├── bronze/sources.yml          # dbt source declarations
-│   │   ├── silver/stg_listings.sql     # Silver staging view
+│   │   ├── silver/stg_listings.sql     # Silver cleansed staging view
 │   │   ├── gold/                       # Star schema dims, facts, and census
-│   │   └── datamart/                   # 3 required business datamart views
+│   │   └── datamart/                   # 3 analytical business datamart views
 │   ├── snapshots/                      # SCD Type 2 dimension snapshots
-│   └── tests/                          # 5 custom business & data integrity tests
-├── dbt_submission_files.zip            # Clean dbt submission archive (models, snapshots, tests, macros)
-├── docker-compose.yml                  # Production Docker stack (Airflow 2.8 + Postgres 15)
+│   └── tests/                          # 5 custom business & data integrity tests (29 tests total)
+├── dbt_submission_files.zip            # Clean submission archive (31 files: models, snapshots, tests, macros)
+├── docker-compose.yml                  # Production Docker stack (Airflow 2.8.1 + Postgres 15)
 ├── reports/
-│   ├── Assignment_3_Report_Aryan_Goel.docx  # Complete formatted Word report (HD academic styling)
+│   ├── Assignment_3_Report_Aryan_Goel.docx  # Final Handover Report (academic styling, <2,500 words)
 │   ├── README.md                       # Figures catalog
-│   └── images/                         # 8 publication-quality charts & diagrams (300 DPI)
+│   └── images/                         # Publication-quality charts, captures & ERDs
 ├── scripts/
-│   ├── build_hd_report_docx.py         # Word report generator with authentic tables
-│   ├── generate_report_diagrams.py     # 300 DPI diagram renderer
-│   └── pipeline_runner.py              # End-to-end execution & validation runner
+│   ├── build_hd_report_docx.py         # Word report generator with verified empirical figures
+│   ├── generate_report_diagrams.py     # High-resolution diagram and chart renderer
+│   └── pipeline_runner.py              # CLI validation runner for all 4 parts
 └── sql/
     ├── 00_init_postgres_users.sql      # Container database & user initialization
     ├── part_1.sql                      # Bronze schema DDL (also 01_create_bronze_schema.sql)
-    └── part_4.sql                      # Part 4 ad-hoc analytical queries (Questions A to E)
+    ├── 01_create_bronze_schema.sql     # DDL script creating bronze, silver, gold schemas
+    ├── part_4.sql                      # Part 4 ad-hoc analytical queries (Questions A to E)
+    └── 02_ad_hoc_analysis.sql          # Ad-hoc analytical queries (Questions A to E mirror)
 ```
 
 ---
 
 ## Deliverables & Mark Allocation Mapping
 
-| Brief Component | Implementation | Location |
+| Brief Component | Implementation Summary | File Location |
 | :--- | :--- | :--- |
-| **Part 1: Airflow Ingestion** | Ingests initial month & reference datasets to Bronze | [`dags/load_airbnb_census_dag.py`](dags/load_airbnb_census_dag.py) |
-| **Part 1: Bronze Schema** | Raw tables created via DDL | [`sql/part_1.sql`](sql/part_1.sql) |
-| **Part 2: Medallion Architecture** | Cleaned staging & SCD2 snapshots | [`dbt_bde/models/silver/`](dbt_bde/models/silver/), [`dbt_bde/snapshots/`](dbt_bde/snapshots/) |
-| **Part 2: Gold Star Schema** | Fact (IDs & metrics only) + 4 dimensions + 2 Census | [`dbt_bde/models/gold/`](dbt_bde/models/gold/) |
-| **Part 2: 3 Datamart Views** | SCD2 point-in-time join logic & all formulas | [`dbt_bde/models/datamart/`](dbt_bde/models/datamart/) |
-| **Part 3: Sequential Ingestion** | Chronological 12-month incremental loads with dbt | [`scripts/pipeline_runner.py`](scripts/pipeline_runner.py) |
-| **Part 4: Ad-Hoc Analytics** | SQL answering questions (A) through (E) | [`sql/part_4.sql`](sql/part_4.sql) |
-| **Full Written Report** | Academic report with figures & empirical findings | [`reports/Assignment_3_Report_Aryan_Goel.docx`](reports/Assignment_3_Report_Aryan_Goel.docx) |
+| **Part 1: Airflow Ingestion** | Ingests initial month & reference datasets to Bronze with automated schema creation and lineage watermarks. | [`dags/load_airbnb_census_dag.py`](dags/load_airbnb_census_dag.py) |
+| **Part 1: Bronze Schema** | Raw tables created via DDL absorbing schema drift as raw `TEXT`. | [`sql/part_1.sql`](sql/part_1.sql) |
+| **Part 2: Medallion Architecture** | Cleaned staging view and 3 SCD Type 2 snapshots tracking history. | [`dbt_bde/models/silver/`](dbt_bde/models/silver/), [`dbt_bde/snapshots/`](dbt_bde/snapshots/) |
+| **Part 2: Gold Star Schema** | Fact table strictly keys and metrics + 4 conformed dimensions + 2 Census tables. | [`dbt_bde/models/gold/`](dbt_bde/models/gold/) |
+| **Part 2: 3 Datamart Views** | SCD2 point-in-time join logic calculating MoM rates, revenues, and occupancy. | [`dbt_bde/models/datamart/`](dbt_bde/models/datamart/) |
+| **Part 3: Sequential Ingestion** | Chronological 12-month incremental ingestion with dbt snapshots and fact builds. | [`scripts/pipeline_runner.py`](scripts/pipeline_runner.py) |
+| **Part 4: Ad-Hoc Analytics** | SQL answering questions (A) through (E) with statistical derivations. | [`sql/part_4.sql`](sql/part_4.sql) |
+| **Full Written Report** | Handover report with 13 figures, 26 tables, and strictly <2,500 words. | [`reports/Assignment_3_Report_Aryan_Goel.docx`](reports/Assignment_3_Report_Aryan_Goel.docx) |
