@@ -28,7 +28,8 @@ DB_NAME = os.getenv("DBT_DBNAME", "postgres")
 DATA_DIR = os.getenv("DATA_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data")))
 DBT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dbt_bde"))
 
-DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DBT_SSLMODE = os.getenv("DBT_SSLMODE", "prefer")
+DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode={DBT_SSLMODE}"
 
 
 def get_engine():

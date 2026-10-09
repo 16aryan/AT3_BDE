@@ -9,6 +9,7 @@ dbt_bde:
       port: "{{ env_var('DBT_PORT', '5432') | int }}"
       dbname: "{{ env_var('DBT_DBNAME', 'postgres') }}"
       schema: public
+      sslmode: "{{ env_var('DBT_SSLMODE', 'prefer') }}"
       threads: 4
       keepalives_idle: 0
     prod:
