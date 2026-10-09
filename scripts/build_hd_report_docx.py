@@ -584,7 +584,7 @@ def generate_report():
     r.bold = True
     r.font.color.rgb = RGBColor(0, 80, 160)
 
-    add_figure(doc, "reports/images/screenshot_part4_sql_results.png", "Figure 9: Terminal psql Execution Output of Analytical Queries in part_4.sql (PostgreSQL 18.6)", width_inches=5.2)
+    add_figure(doc, "reports/images/screenshot_part4_sql_results.png", "Figure 9: Google Cloud SQL Studio Execution Output of Analytical Queries in part_4.sql (PostgreSQL 18.6)", width_inches=5.2)
 
     # QUESTION A
     add_summary_box(
