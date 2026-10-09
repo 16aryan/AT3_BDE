@@ -300,19 +300,16 @@ def generate_report():
     r.font.color.rgb = RGBColor(0, 80, 160)
 
     doc.add_paragraph(
-        "This engineering handover report documents the complete architectural design, workflow orchestration, multi-layered data modeling, "
-        "and empirical SQL analytics developed for Inside Airbnb Sydney listings and Australian Bureau of Statistics (ABS) 2016 Census datasets. "
-        "The project encompasses a longitudinal evaluation window spanning May 2020 to April 2021, totaling 412,122 listing records across 12 consecutive "
-        "monthly snapshots. Authored for peer data engineers and technical assessors, this document establishes a reproducible, production-grade "
-        "Medallion ELT pipeline operationalized across local containerized Docker environments and enterprise Google Cloud Platform (GCP) infrastructure."
+        "This handover report documents the architectural design, workflow orchestration, data modeling, and empirical SQL analytics "
+        "developed for Inside Airbnb Sydney listings and ABS 2016 Census datasets spanning May 2020 to April 2021 (412,122 listing records across 12 "
+        "monthly snapshots). Authored for peer data engineers, this document outlines an enterprise Medallion ELT pipeline operationalized "
+        "across containerized Docker and Google Cloud Platform (GCP) infrastructure."
     )
 
     doc.add_paragraph(
-        "Modern data engineering mandates an Extract-Load-Transform (ELT) pattern over legacy ETL. In our architecture, "
-        "raw ingestion lands high-fidelity source data directly into Bronze schemas without type coercion, preventing failures from "
-        "upstream schema drift or malformed values. Downstream cleansing, categorical harmonization, and longitudinal Slowly Changing "
-        "Dimension (SCD Type 2) tracking are pushed into the warehouse using dbt Core. Decoupling ingestion from transformation "
-        "ensures idempotency across batch loads, enforces point-in-time auditability, and optimizes warehouse compute performance."
+        "Adhering to the modern ELT paradigm, raw ingestion lands untyped high-fidelity data directly into Bronze schemas, while "
+        "transformations, cleansing, and Slowly Changing Dimension (SCD Type 2) tracking are pushed into the warehouse using declarative "
+        "dbt models. This decouples compute from storage, ensures batch idempotency, and establishes longitudinal auditability."
     )
 
     p = doc.add_paragraph()
@@ -511,6 +508,7 @@ def generate_report():
     )
 
     add_figure(doc, "reports/images/star_schema_erd.png", "Figure 6: Gold Tier Star Schema Entity-Relationship Diagram (Pure Numeric Fact & Conformed Dimensions)", width_inches=5.0)
+    add_figure(doc, "reports/images/cloud_sql_studio.png", "Figure 7: Google Cloud SQL Studio Explorer Displaying Populated Bronze, Silver, and Gold Schemas", width_inches=4.8)
 
     doc.add_paragraph(
         "Point-in-Time Temporal Joins: To eliminate lookahead bias (data leakage), facts are matched strictly against the dimension record effective at transaction time:"
@@ -565,7 +563,7 @@ def generate_report():
         "in downstream Gold models ensure that historical transactions reflect the exact state effective at scrape time."
     )
 
-    add_figure(doc, "reports/images/screenshot_part3_monthly_runs.png", "Figure 7: Airflow Web UI DAG Run Grid History Showing Successful Execution Across Monthly Batch Loads", width_inches=5.2)
+    add_figure(doc, "reports/images/screenshot_part3_monthly_runs.png", "Figure 8: Airflow Web UI DAG Run Grid History Showing Successful Execution Across Monthly Batch Loads", width_inches=5.2)
 
     add_callout_box(
         doc,
@@ -586,7 +584,7 @@ def generate_report():
     r.bold = True
     r.font.color.rgb = RGBColor(0, 80, 160)
 
-    add_figure(doc, "reports/images/screenshot_part4_sql_results.png", "Figure 8: Terminal psql Execution Output of Analytical Queries in part_4.sql (PostgreSQL 18.6)", width_inches=5.2)
+    add_figure(doc, "reports/images/screenshot_part4_sql_results.png", "Figure 9: Terminal psql Execution Output of Analytical Queries in part_4.sql (PostgreSQL 18.6)", width_inches=5.2)
 
     # QUESTION A
     add_summary_box(
@@ -621,7 +619,7 @@ def generate_report():
         ]
     )
 
-    add_figure(doc, "reports/images/chart_q1_top_bottom_lgas.png", "Figure 9: Question A: Comparative Performance & Socioeconomic Indicators (Top 3 vs Bottom 3 LGAs)", width_inches=5.0)
+    add_figure(doc, "reports/images/chart_q1_top_bottom_lgas.png", "Figure 10: Question A: Comparative Performance & Socioeconomic Indicators (Top 3 vs Bottom 3 LGAs)", width_inches=5.0)
 
     add_callout_box(
         doc,
@@ -667,7 +665,7 @@ def generate_report():
         ]
     )
 
-    add_figure(doc, "reports/images/chart_q2_median_age_vs_revenue.png", "Figure 10: Question B: Correlation Scatter Plot & Trendline (Median Age vs Revenue, r = +0.6554)", width_inches=5.0)
+    add_figure(doc, "reports/images/chart_q2_median_age_vs_revenue.png", "Figure 11: Question B: Correlation Scatter Plot & Trendline (Median Age vs Revenue, r = +0.6554)", width_inches=5.0)
 
     add_callout_box(
         doc,
@@ -714,7 +712,7 @@ def generate_report():
         ]
     )
 
-    add_figure(doc, "reports/images/chart_q3_top5_neighbourhoods_stays.png", "Figure 11: Question C: Optimal Property Configuration Stays in Top 5 Revenue Neighbourhoods", width_inches=5.0)
+    add_figure(doc, "reports/images/chart_q3_top5_neighbourhoods_stays.png", "Figure 12: Question C: Optimal Property Configuration Stays in Top 5 Revenue Neighbourhoods", width_inches=5.0)
 
     add_callout_box(
         doc,
@@ -757,7 +755,7 @@ def generate_report():
         ]
     )
 
-    add_figure(doc, "reports/images/chart_q4_host_concentration.png", "Figure 12: Question D: Multi-Listing Host Portfolio Geographic Distribution Pattern", width_inches=3.8)
+    add_figure(doc, "reports/images/chart_q4_host_concentration.png", "Figure 13: Question D: Multi-Listing Host Portfolio Geographic Distribution Pattern", width_inches=3.8)
 
     add_callout_box(
         doc,
@@ -809,7 +807,7 @@ def generate_report():
         ]
     )
 
-    add_figure(doc, "reports/images/chart_q5_mortgage_coverage.png", "Figure 13: Question E: Single-Listing Hosts Covering Annualised Median Mortgage by LGA", width_inches=5.0)
+    add_figure(doc, "reports/images/chart_q5_mortgage_coverage.png", "Figure 14: Question E: Single-Listing Hosts Covering Annualised Median Mortgage by LGA", width_inches=5.0)
 
     add_callout_box(
         doc,
